@@ -178,8 +178,8 @@ ShowTitle:
 boot:
           SEI                            ; interrupt disable
           CLD                            ; decimal mode off
-          LDA #$F7
-          STA ENVREG                     ; enable ROMs and 1MHz operation (0x80)
+          LDA #$77
+          STA ENVREG                     ; enable ROMs, select 2MHz operation
           LDA #$00
           STA BANKREG                    ; bank 0 select
           LDX #$FB                       ; set stack
