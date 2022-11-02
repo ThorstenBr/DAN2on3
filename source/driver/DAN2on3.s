@@ -191,9 +191,10 @@ MaxUnits:  .BYTE     $00                  ; The maximum number of units
 DCB_Idx:   .BYTE     $00                  ; DCB 0's blocks
            .BYTE     DIB1_Blks-DIB0_Blks  ; DCB 1's blocks
 
-Dan2CardIdLen = $05                       ; check 5 bytes in ROM for card detection
-Dan2CardIdOfs = $08                       ; offset where to find the DAN2 card's ID
-Dan2CardId:.BYTE     $D0,$03,$9D,$FB,$BF  ; ROM bytes at offset $08: "BNE +3;STA $BFFB,X"
+DAN2CardIdLen = $05                       ; check 5 bytes in ROM for card detection
+DAN2CardIdOfs = $08                       ; offset where to find the DAN2 card's ID
+DAN2CardId:.BYTE     $D0,$03,$9D,$FB,$BF  ; ROM bytes at offset $08: "BNE +3;STA $BFFB,X"
+
 InitOK:    .BYTE     $00                  ; Have we initialized the DANII card successfully?
 LastError: .BYTE     $00                  ; Recent error RC from DAN2 card
 
@@ -264,11 +265,11 @@ DInit:
 CheckSig: LDA #$C0                   ; Form a $CsXX address, where s = slot #, XX=offset
           ORA DIB0_Slot              ; Add in slot number
           STA Count+1
-          LDA #Dan2CardIdOfs         ; load offset of card ID
+          LDA #DAN2CardIdOfs         ; load offset of card ID
           STA Count
-          LDY #Dan2CardIdLen-1       ; load length of card ID
+          LDY #DAN2CardIdLen-1       ; load length of card ID
 @1:       LDA (Count),Y
-          CMP Dan2CardId,Y           ; Check for DAN2 ROM signature in slot ROM
+          CMP DAN2CardId,Y           ; Check for DAN2 ROM signature in slot ROM
           BNE NoDevice               ; No device if bytes don't match
           DEY
           BPL @1
