@@ -5,9 +5,11 @@
 
 all: bin
 	make -C source/driver $@
+	make -C source/configmenu $@
 
 clean:
 	make -C source/driver $@
+	make -C source/configmenu $@
 	rm -f bin/*
 
 bin:

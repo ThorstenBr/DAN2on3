@@ -2,4 +2,7 @@ info
 *.o65
 *.o
 bin/SOS.DRIVER.original
-
+source/driver/bin/*
+source/configmenu/bin/*
+OLD
+BACKUP
