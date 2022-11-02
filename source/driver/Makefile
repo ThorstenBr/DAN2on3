@@ -12,7 +12,7 @@ SOURCE_DISK := ../disk/Apple3SOS1.3SysUtils.dsk
 # temporary disk file
 TEMP_DISK   := bin/_Apple3SOS.SysUtils.dsk
 # Final System Utilities disk with new driver (output)
-OUTPUT_DISK := bin/Apple3SOS.SysUtils.DAN2o3.dsk
+OUTPUT_DISK := bin/Apple3SOS.DAN2on3.SysUtils.dsk
 
 # Build Utilities
 A3DU_PATH := ../../tools/A3Driverutil

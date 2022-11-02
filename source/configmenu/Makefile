@@ -8,7 +8,7 @@ O65_FILE := $(addprefix bin/,$(ASM_FILE:.s=.o65))
 # Input disk file
 INPUT_DISK  := ../disk/Apple3SOS1.3SysUtils.dsk
 # Output disk file
-OUTPUT_DISK := bin/Apple3SOS_DAN2o3_Config.dsk
+OUTPUT_DISK := bin/Apple3SOS.DAN2on3.Config.dsk
 # Temporary disk file
 TEMP_DISK := bin/temp.dsk
 # Build Utilities
@@ -46,9 +46,11 @@ $(OUTPUT_DISK): $(O65_FILE)
 	$(AppleCommander) -d $(TEMP_DISK) SYSTEM.PASCAL
 	$(AppleCommander) -d $(TEMP_DISK) SYSTEM.MISCINFO
 	$(AppleCommander) -d $(TEMP_DISK) SYSTEM.STARTUP
-	$(ECHO) "$(LOG_PREFIX) Adding separate driver file to SysUtils disk..."
+	$(ECHO) "$(LOG_PREFIX) Setting volume name..."
+	$(AppleCommander) -n $(TEMP_DISK) DAN2ON3.CONFIG
+	$(ECHO) "$(LOG_PREFIX) Adding separate driver file to disk..."
 	cat ../../bin/DAN2ON3.DRIVER | $(AppleCommander) -p $(TEMP_DISK) DAN2ON3.DRIVER SOS
-	$(ECHO) "$(LOG_PREFIX) Patching bootloader to disk image $@"
+	$(ECHO) "$(LOG_PREFIX) Patching bootloader to disk $@"
 	$(APPLE_BOOT) $< $(TEMP_DISK) $(OUTPUT_DISK)
 	rm $(TEMP_DISK)
 	cp $@ ../../bin/.
