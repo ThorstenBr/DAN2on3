@@ -9,15 +9,17 @@ O65_FILE := $(addprefix bin/,$(ASM_FILE:.s=.o65))
 INPUT_DISK  := ../disk/Apple3SOS1.3SysUtils.dsk
 # Output disk file
 OUTPUT_DISK := bin/Apple3SOS_DAN2o3_Config.dsk
-
+# Temporary disk file
+TEMP_DISK := bin/temp.dsk
 # Build Utilities
 APPLE_BOOT := python3 ../../tools/AppleBoot/makeAppleBootDisk.py
+AppleCommander := java -jar ../../tools/AppleCommander/AppleCommander-1.3.5.13-ac.jar
 
 # Logging stuff
 LOG_PREFIX := "--\> "
 ECHO := @echo -e
 
-.SILENT: all $(O65_FILE) $(O65_FILE:.o65=.o)
+.SILENT: all clean bin list $(O65_FILE) $(O65_FILE:.o65=.o) $(OUTPUT_DISK)
 
 all: bin $(O65_FILE) $(OUTPUT_DISK)
 
@@ -36,7 +38,23 @@ bin/%.o65: bin/%.o
 	ld65 -tnone $< -o $@
 
 $(OUTPUT_DISK): $(O65_FILE)
+	$(ECHO) "$(LOG_PREFIX) Preparing empty Apple III SOS disk..."
+	cp $(INPUT_DISK) $(TEMP_DISK)
+	$(AppleCommander) -d $(TEMP_DISK) SOS.KERNEL
+	$(AppleCommander) -d $(TEMP_DISK) SOS.DRIVER
+	$(AppleCommander) -d $(TEMP_DISK) SOS.INTERP
+	$(AppleCommander) -d $(TEMP_DISK) SYSTEM.PASCAL
+	$(AppleCommander) -d $(TEMP_DISK) SYSTEM.MISCINFO
+	$(AppleCommander) -d $(TEMP_DISK) SYSTEM.STARTUP
+	$(ECHO) "$(LOG_PREFIX) Adding separate driver file to SysUtils disk..."
+	cat ../../bin/DAN2ON3.DRIVER | $(AppleCommander) -p $(TEMP_DISK) DAN2ON3.DRIVER SOS
 	$(ECHO) "$(LOG_PREFIX) Patching bootloader to disk image $@"
-	$(APPLE_BOOT) $< $(INPUT_DISK) $(OUTPUT_DISK)
+	$(APPLE_BOOT) $< $(TEMP_DISK) $(OUTPUT_DISK)
+	rm $(TEMP_DISK)
 	cp $@ ../../bin/.
+
+# show disk contents
+list:
+	$(ECHO) "$(LOG_PREFIX) Disk contents:"
+	$(AppleCommander) -ll $(OUTPUT_DISK)
 

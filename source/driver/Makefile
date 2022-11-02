@@ -61,8 +61,6 @@ $(OUTPUT_DISK): bin/SOS.DRIVER $(DAN2ON3_DRIVER) $(SOURCE_DISK)
 	$(AppleCommander) -d $(TEMP_DISK) SOS.DRIVER
 	$(ECHO) "$(LOG_PREFIX) Adding new SOS.DRIVER to SysUtils disk..."
 	cat bin/SOS.DRIVER | $(AppleCommander) -p $(TEMP_DISK) SOS.DRIVER SOS
-#	$(ECHO) "$(LOG_PREFIX) Adding separate driver file to SysUtils disk..."
-#	cat bin/DAN2on3.driver | $(AppleCommander) -p $(TEMP_DISK) DAN2on3.driver SOS
 	mv $(TEMP_DISK) $@
 	cp $@ ../../bin/.
 
