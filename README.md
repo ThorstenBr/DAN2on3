@@ -20,6 +20,7 @@ The DAN II controller is made to fit the slim Apple II case - so it has more tha
 * Faster than on the Apple II: the controller works fine at Apple ///'s full 2 MHz clock.
 * Separate Apple /// disk with DAN II Controller volume configuration.
 * Supports images of up to 32MB (65535 * 512 bytes). Smaller images are also supported. (Apparently 32MB images are problematic with SOS. So, preferably use 16MB images...)
+* Automatic detection of the DAN II Controller slot (default). Manual slot configuration also supported.
 * Format support *not* available (yet). Currently you have to use preformatted disk images.
 
 # Controller Volume Configuration
@@ -49,17 +50,23 @@ The [Apple3SOS.DAN2on3.Config.dsk](/bin/Apple3SOS.DAN2on3.Config.dsk) (with the 
 
 You can also use the separately provided [Apple3SOS.DAN2on3.SysUtils.dsk](/bin/Apple3SOS.DAN2on3.SysUtils.dsk) which provides the System Utilities for SOS 1.3 - and is already preconfigured with the DAN2ON3.DRIVER.
 
-The SOS driver defaults to slot 1. As usual with Apple /// drivers, you have to manually select the slot where your DAN II controller card is plugged. Auto-detection is (currently) not implemented for the SOS driver...
+By default, the SOS driver automatically detects the slot occupied by the DAN II controller.
+You can also use manual configuration, however, as this was usual for Apple /// drivers.
 
-To configure the slot:
+If you wish to manually configure the slot:
 * Enter SCP (System Configuration Program).
 * Load your SOS.DRIVER file.
 * Read and add the DAN2ON3.DRIVER from the configuration disk.
 * Select "Edit Driver Parameters" and select the ".DAN1" (or ".DAN2") device.
-* Change "Slot Number" as required.
+* Change "Slot Number" as required. Slot auto-detection is enabled (default) when "??" is shown instead of a specific slot number.
 * Finally select "Generate New System" and write the new configuration to your boot disk.
 
 ![Apple III - DAN2on3 SOS Slot Configuration](/photos/DAN2on3_SlotConfig2.jpg)
+
+## Caveats
+*Auto-detection not working*: The driver does support slot auto-detection of the DAN II Controller, however, this may not work if your SOS.DRIVER file contains another driver which is configured to occupy a specific slot.
+If, for example, your configuration contains a .PROFILE or .RAM driver configured to slot 3, you removed the respective card from its slot, and plugged your DAN II Controller in this same slot instead, then SOS will fail to load the DAN2ON3 driver.
+SOS blocks the request of a driver, when the requested slot is already allocated to another driver - even if the other hardware isn't present. You will need to disable the conflicting driver (set it to "INACTIVE"), change its slot, or remove the conflicting driver entirely from your SOS.DRIVER configuration.
 
 # Usage
 Once the driver is installed in your Apple ///'s SOS.DRIVER, you have two new drives:

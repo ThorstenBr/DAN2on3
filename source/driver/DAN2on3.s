@@ -14,7 +14,7 @@
 ;FORMAT_SUPPORT = 1               ; disabled for now (not implemented yet)
 ;UART_DEBUGGING = 1               ; enable/disable DEBUG output
 
-DriverVersion   = $1000           ; Driver Version 1.0.1 ($ABC0 = A.B.C)
+DriverVersion   = $1010           ; Driver Version 1.0.1 ($ABC0 = A.B.C)
 DriverVendor    = $5442           ; Driver Vendor "TB"
 .IFDEF FORMAT_SUPPORT
 DriverType      = $D1             ; Block device/Write/non-removable/format support
@@ -22,7 +22,7 @@ DriverType      = $D1             ; Block device/Write/non-removable/format supp
 DriverType      = $C1             ; Block device/Write/non-removable/no format support
 .ENDIF
 DriverSubtype   = $02		  ; subtype "profile"
-InitialSlot     = $01             ; Slot number to assume we're in
+InitialSlot     = $FF             ; Slot number to assume we're in ($FF=automatically search slot)
 
 ;
 ; DANII Command Constants
@@ -262,22 +262,34 @@ DInit:
           LDA SOS_Unit               ; Check if we're initting the zeroeth unit
           BNE UnitInit               ; No - then skip the signature check
 
-CheckSig: LDA #$C0                   ; Form a $CsXX address, where s = slot #, XX=offset
-          ORA DIB0_Slot              ; Add in slot number
+CheckSig: LDX DIB0_Slot              ; Load slot number
+          BPL SlotNext               ; check if fixed slot (1-4) is given or search is enabled (FF)
+          LDX #$01                   ; start scanning at slot 1
+SlotNext: TXA                        ; Form a $CsXX address, where s = slot #, XX=offset
+          ORA #$C0                   ; I/O segment address
           STA Count+1
           LDA #DAN2CardIdOfs         ; load offset of card ID
           STA Count
           LDY #DAN2CardIdLen-1       ; load length of card ID
-@1:       LDA (Count),Y
-          CMP DAN2CardId,Y           ; Check for DAN2 ROM signature in slot ROM
-          BNE NoDevice               ; No device if bytes don't match
-          DEY
-          BPL @1
-                                     ; Found a DAN2 card!
-          LDA DIB0_Slot
+SigNext:  LDA (Count),Y              ; load byte from slot ROM
+          CMP DAN2CardId,Y           ; Compare with known DAN2 ROM signature
+          BNE NoMatch                ; Not a DAN2 controller if bytes don't match
+          DEY                        ; count remaining bytes to check
+          BPL SigNext                ; continue signature check?
+          BMI Match                  ; All bytes matched: found a DAN2 card!
+
+NoMatch:  LDA DIB0_Slot              ; Get original slot number
+          BPL NoDevice               ; a fixed slot number was given? Abort!
+          INX                        ; advance to scan next slot
+          CPX #$05                   ; Already at slot 5?
+          BEQ NoDevice               ; abort: no device (we have only 4 slots)
+          BNE SlotNext               ; scan the next slot
+
+Match:    TXA                        ; get slot number
+          STA DIB0_Slot              ; remember slot number
+          STA DIB1_Slot
           ORA #$10                   ; SIR = 16+slot#
           STA SIR_Tbl
-          STA InitOK                 ; Remember we found the card!
           LDA #SIR_Len
           LDX SIR_Addr
           LDY SIR_Addr+1
@@ -291,6 +303,7 @@ CheckSig: LDA #$C0                   ; Form a $CsXX address, where s = slot #, X
                                      ; How many units can we expect at maximum?
           LDA #$02                   ; fixed number of volumes so far
           STA MaxUnits
+          STA InitOK                 ; Remember we found the card!
 
 UnitInit:
           LDA InitOK                 ; Did we previously find a card?
