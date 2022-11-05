@@ -145,12 +145,11 @@ PRINT_NEXT:
 PRINT_DONE:
           TYA                        ; update screen address (behind the printed string)
           CLC
-          ADC CURSOR                 ; move cursor behing
+          ADC CURSOR                 ; move cursor behind printed string
           STA CURSOR
-          LDA #$00
-          ADC CURSOR+1               ; add carry
-          STA CURSOR+1
-	  RTS
+          BCC noCarry
+          INC CURSOR+1               ; add carry
+noCarry:  RTS
 
 ;
 ; boot entry
