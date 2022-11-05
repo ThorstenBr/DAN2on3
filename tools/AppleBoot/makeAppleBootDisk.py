@@ -19,14 +19,16 @@ OutputFileName = sys.argv[3] # output: the disk file (.dsk)
 # read bootloader
 with open(InputFileName, "rb") as InputFile:
 	Bootloader = InputFile.read()
-	
+
+OriginalSize = len(Bootloader)
+
 # check size
-if len(Bootloader)>1024:
+if OriginalSize > 1024:
 	print("ERROR: Bootloader is exceeds 1024 bytes (two blocks). That's not going to work!")
 	sys.exit(1)
 
 # fill bootloader to a multiple of 512, so it occupies full blocks
-if len(Bootloader) % 512 != 0:
+if OriginalSize % 512 != 0:
 	Bootloader += b"\x00"*(512-(len(Bootloader) % 512))
 
 Disk = b"\x00" * DISK_SIZE
@@ -43,7 +45,7 @@ Disk = Bootloader[0:0x0100]+Disk[0x0100:0x0E00]+Bootloader[0x100:0x200]+Disk[0xF
 # patch larger boot loaders also into block 1 (DSK has a non-linear sector format)
 # This overwrites the Apple II bootloader!
 if len(Bootloader)>512:
-	print("Note: Bootloader exceeds 512 bytes, so overwrites the Apple II bootloader in block 1.")
+	print("Note: Bootloader (%i bytes) exceeds 512 bytes, so overwrites the Apple II bootloader in block 1." %(OriginalSize,))
 	Disk = Disk[0x0000:0x0c00]+Bootloader[0x300:0x400]+Bootloader[0x200:0x300]+Disk[0xE00:]
 
 # write disk image
