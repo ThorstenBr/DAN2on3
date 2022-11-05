@@ -89,49 +89,35 @@ DAN2BlkNum= $D4                   ; DAN2 Block Location (2 bytes, little endian)
 ;
 INVERSE   = $C8                   ; character mode (normal, inverse etc)
 DAN2Slot  = $C9                   ; 1 byte: slot number of the DAN2 card
-CURSORPOS = $CA                   ; 2 bytes
+CURSOR    = $CA                   ; 2 bytes
 POINTER   = $CC                   ; 2 bytes
 
 ;
 ; Macros
 ;
 .MACRO CURSOR line
-          LDA #<line
-          STA CURSORPOS
-          LDA #>line
-          STA CURSORPOS+1
+          LDA #<(line)
+          STA CURSOR
+          LDA #>(line)
+          STA CURSOR+1
 .ENDMACRO
 
 .MACRO PRINT msg
-          LDA #<msg
-          STA POINTER
-          LDA #>msg
-          STA POINTER+1
+          LDY #<(msg)             ; load low byte of string address in Y
+          LDA #>(msg)             ; load high byte of string address in A
           JSR DO_PRINT
 .ENDMACRO
 
 .MACRO PRINTY line,msg
-          CURSOR line
-          PRINT msg
+          CURSOR (line)
+          PRINT (msg)
 .ENDMACRO
 
 ;
 ; Strings (in first boot block)
 ;
 TITLE_MSG: .BYTE "DAN2ON3 - APPLE /// SD CARD STORAGE MENU",0
-APPLE4EVR: .BYTE "          APPLE II(I) FOREVER!          ",0
-
-;
-; Loader for second boot block
-;
-LoadBlock2:
-          LDA #$01           ; load sector1/block 1 (=A)
-          STA IBCMD          ; set BLOCKIO command: 1=READ
-          LDX #$A2
-          STX IBBUFP+1       ; set upper address byte
-          LDX #$00           ; load track 0 (=X)
-          STX IBBUFP         ; clear lower address byte
-          JMP BLOCKIO        ; now load block 1 (A), track 0 (X)
+APPLE4EVR: .BYTE "APPLE II(I) FOREVER!",0
 
 ;
 ; Read any key (=> A)
@@ -142,35 +128,29 @@ READKEY:
           STA  KBD_STROBE            ; clear key
           RTS
 
-DO_PRINT: LDY #$00                   ; simple print routine
+;
+; Print string at address A/Y
+; (always exits with C=0, A!=0)
+;
+DO_PRINT: STA POINTER+1              ; store A/Y in pointer
+          STY POINTER
+          LDY #$00                   ; simple print routine
 PRINT_NEXT:
           LDA (POINTER),Y            ; read byte from string
           BEQ PRINT_DONE             ; done when 0
           ORA INVERSE                ; add inverse/normal text flag
-          STA (CURSORPOS),Y          ; write to screen
+          STA (CURSOR),Y             ; write to screen
           INY
           BNE PRINT_NEXT             ; next
 PRINT_DONE:
           TYA                        ; update screen address (behind the printed string)
           CLC
-          ADC CURSORPOS              ; move cursor behing
-          STA CURSORPOS
+          ADC CURSOR                 ; move cursor behing
+          STA CURSOR
           LDA #$00
-          ADC CURSORPOS+1            ; add carry
-          STA CURSORPOS+1
+          ADC CURSOR+1               ; add carry
+          STA CURSOR+1
 	  RTS
-
-;
-; Show title and footer message
-;
-ShowTitle:
-          LDA #$00
-          STA INVERSE
-          PRINTY TITLE_LINE,  TITLE_MSG
-          PRINTY FOOTER_LINE, APPLE4EVR
-          LDA #$80
-          STA INVERSE
-          RTS
 
 ;
 ; boot entry
@@ -185,78 +165,100 @@ boot:
           LDX #$FB                       ; set stack
           TXS
           JSR CLRSCR                     ; init screen
-          BIT BEEPER                     ; beep
-          JSR ShowTitle                  ; show title
-          JSR LoadBlock2                 ; load the second part of the bootloader
-          BCC loadok                     ; success?
-errorbeep:
-          STA BEEPER
-lockup:   JMP lockup
-loadok:
+;          BIT BEEPER                     ; beep
+
+ShowTitle:LDA #$00                       ; show title
+          STA INVERSE                    ; enable inverse printing
+          PRINTY TITLE_LINE,  TITLE_MSG
+          CURSOR FOOTER_LINE
+          LDA #$20
+          LDY #$27                       ; clear 40 characters ($00-$27)
+CLRLINE:  STA (CURSOR),Y
+          DEY
+          BPL CLRLINE
+          LDA #<(FOOTER_LINE+10)
+          STA CURSOR
+          PRINT APPLE4EVR
+          LDA #$80
+          STA INVERSE                    ; disable inverse printing
+LoadBlock2:                              ; load the second part of the bootloader
+          LDA #$01                       ; load sector1/block 1 (=A)
+          STA IBCMD                      ; set BLOCKIO command: 1=READ
+          LDX #$A2
+          STX IBBUFP+1                   ; set upper address byte
+          LDX #$00                       ; load track 0 (=X)
+          STX IBBUFP                     ; clear lower address byte
+          JSR BLOCKIO                    ; now load block 1 (A), track 0 (X)
+          BCS ErrorBeep                  ; unable to load?
+LoadOK:
           LDA OK_MSG                     ; verify content of second bootloader block
           CMP #'O'                       ; data as expected?
-          BNE errorbeep                  ; no? then give up...
+          BNE ErrorBeep                  ; no? then give up...
           JSR DAN2Init                   ; find the DAN2 card
-          BCC HaveCard
-          JMP HaveNoCard                 ; No card? Damn!
+          BCS HaveNoCard                 ; No card? Damn!
 HaveCard: LDA DAN2Slot                   ; Get slot number
           ORA #'0'                       ; convert to ASCII
           STA SLOT_NUMBER                ; Update message
-          PRINTY SLOT_LINE,  SLOT_MSG    ; Show message with slot number
+          PRINTY SLOT_LINE+5, SLOT_MSG   ; Show message with slot number
 
           JSR DAN2CheckVolumes           ; Show status of volumes
 
-          PRINTY CARD1_LINE, CARD1_MSG   ; Ask for card1 configuration
+          PRINTY CARD1_LINE+5, CARD1_MSG ; Ask for card1 configuration
           LDX #$01                       ; allow entering '!'
           JSR GETCARDKEY
-          STA DAN2BlkNum
-          LDY #$01
-          TXA
-          STA (CURSORPOS),Y
+          STA DAN2BlkNum                 ; remember card 1 selection
 
-          PRINTY CARD2_LINE, CARD2_MSG   ; Ask for card2 configuration
+          PRINTY CARD2_LINE+5, CARD2_MSG ; Ask for card2 configuration
           LDX #$00                       ; do not allow entering '!'
           JSR GETCARDKEY
           STA DAN2BlkNum+1
-          LDY #$01
-          TXA
-          STA (CURSORPOS),Y
-          
+
           LDA #DAN2_DoSetVol             ; cofiguration command
           JSR DAN2_Do
           BCS CfgErr                     ; error?
-          PRINTY CONFIG_LINE, CFGOK_MSG  ; configuration OK
-          JMP CfgDone
-CfgErr:   PRINTY CONFIG_LINE, CFGERR_MSG ; configuration error
+          PRINTY CONFIG_LINE+11, CFGOK_MSG ; "configuration "
+          BCC CfgDone
+
+ErrorBeep:BIT BEEPER                     ; just ring the bell
+EXIT:     JMP EXIT                       ; full stop!
+
+CfgErr:   PRINTY CONFIG_LINE+9, CFGERR_MSG  ; "configuration "
 CfgDone:  JSR DAN2CheckVolumes           ; Update status of volumes
-EXIT:     JMP EXIT                       ; just block
+          BCC EXIT                       ; unconditional branch, just block
 
 HaveNoCard:
-          PRINTY SLOT_LINE, NOSLOT_MSG
-          JMP EXIT
+          PRINTY SLOT_LINE+7, NOSLOT_MSG
+          BCC ErrorBeep                  ; unconditional branch, just block
 
 ;
 ; Check status of both volumes
 ;
 DAN2CheckVolumes:
-          PRINTY STATUS1_LINE,VOL1_MSG
-          LDA #$00                ; volume 1
-          STA DAN2Unit
+          LDX #$00                ; volume 1
+          STX DAN2Unit
+          LDX #'1'
+          STX CARD_NUM            ; update VOL_MSG string: "CARD 1"
+          PRINTY STATUS1_LINE+6,VOL_MSG
           LDA #DAN2_DoStatus      ; status command
           JSR DAN2_Do             ; get status
           JSR PrintStatus
 
-          PRINTY STATUS2_LINE,VOL2_MSG
+          LDX #'2'
+          STX CARD_NUM            ; update VOL_MSG string: "CARD 2"
+          PRINTY STATUS2_LINE+6,VOL_MSG
           LDA #$80                ; volume 2
           STA DAN2Unit
           LDA #DAN2_DoStatus      ; status command
           JSR DAN2_Do             ; get status
 PrintStatus:
           BCS StatusError
-          PRINT OK_MSG
-          RTS
+          LDY #<OK_MSG            ; load low byte
+          BCC PrintStatus2
 StatusError:
-          PRINT NOVOL_MSG
+          LDY #<NOVOL_MSG         ; load low byte of string address in Y
+PrintStatus2:
+          LDA #>NOVOL_MSG         ; load high byte of string address in A
+          JSR DO_PRINT
           RTS
 
 ;
@@ -303,25 +305,26 @@ NextSlot:
 ;
 ; Read volume selection key.
 ;  Does not allow user to select '!' unless called with X!=0.
-;  Original keycode is returned in X.
 ;  Selected volume number is returned in A.
 ;  A: 0-9 or $FF for '!'
 ;
 GETCARDKEY:
           JSR READKEY             ; read keyboard
-          TAX                     ; original keycode to X
+          LDY #$01                ; load offset for character output
           CMP #'!'+128            ; check '!'
           BEQ EXCL
           CMP #'0'+128            ; less than '0'?
           BCC KEYERR
           CMP #'9'+128+1          ; beyond '9'?
           BCS KEYERR
+          STA (CURSOR),Y          ; print selected character to screen
           AND #$0F                ; mask 0..9
           RTS
 KEYERR:   BIT BEEPER              ; beep on invalid entries
           JMP GETCARDKEY          ; try again
 EXCL:     CPX #$00                ; was '!' selection allowed?
           BEQ KEYERR              ; otherwise try again
+          STA (CURSOR),Y          ; print selected character to screen
           LDA #$FF                ; ok, return $FF
           RTS
 
@@ -373,15 +376,15 @@ DAN2ok:                              ; A=0 at this point
           CLC                        ; no error
           RTS
 
-NOSLOT_MSG:.BYTE "       NO DANII CONTROLLER FOUND!",0
-SLOT_MSG:  .BYTE "     DANII CONTROLLER IN SLOT "
+NOSLOT_MSG:.BYTE "NO DANII CONTROLLER FOUND!",0
+SLOT_MSG:  .BYTE "DANII CONTROLLER IN SLOT "
 SLOT_NUMBER:.BYTE "0 OK!",0
-VOL1_MSG:  .BYTE "      STATUS CARD 1: ",0
-VOL2_MSG:  .BYTE "      STATUS CARD 2: ",0
-NOVOL_MSG: .BYTE "NO VOLUME ",0
-CFGOK_MSG: .BYTE "           CONFIGURATION OK!",0
-CFGERR_MSG:.BYTE "         CONFIGURATION FAILED!",0
-CARD1_MSG: .BYTE "     CARD 1 (0-9,!):",0
-CARD2_MSG: .BYTE "     CARD 2 (0-9)  :",0
-OK_MSG:    .BYTE "OK        ",0
+CFGOK_MSG: .BYTE "CONFIGURATION OK!",0
+CFGERR_MSG:.BYTE "CONFIGURATION FAILED!",0
+VOL_MSG:   .BYTE "STATUS CARD "
+CARD_NUM:  .BYTE "0: ",0
+CARD1_MSG: .BYTE "CARD 1 (0-9,!):",0
+CARD2_MSG: .BYTE "CARD 2 (0-9)  :",0
+NOVOL_MSG: .BYTE "NO VOLUME",0
+OK_MSG:    .BYTE "OK       ",0
 
