@@ -13,7 +13,7 @@ OUTPUT_DISK := bin/Apple3SOS.DAN2on3.Config.dsk
 TEMP_DISK := bin/temp.dsk
 # Build Utilities
 APPLE_BOOT := python3 ../../tools/AppleBoot/makeAppleBootDisk.py
-AppleCommander := java -jar ../../tools/AppleCommander/AppleCommander-1.3.5.13-ac.jar
+AppleCommander := java -jar ../../tools/AppleCommander/AppleCommander-ac-1.8.0.jar
 
 # Logging stuff
 LOG_PREFIX := "--\> "

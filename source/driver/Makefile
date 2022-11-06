@@ -17,7 +17,7 @@ OUTPUT_DISK := bin/Apple3SOS.DAN2on3.SysUtils.dsk
 # Build Utilities
 A3DU_PATH := ../../tools/A3Driverutil
 A3DriverUtil := python $(A3DU_PATH)/a3driverutil.py
-AppleCommander := java -jar ../../tools/AppleCommander/AppleCommander-1.3.5.13-ac.jar
+AppleCommander := java -jar ../../tools/AppleCommander/AppleCommander-ac-1.8.0.jar
 
 # Logging stuff
 LOG_PREFIX := "--\> "
