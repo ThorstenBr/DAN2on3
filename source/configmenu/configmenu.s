@@ -71,10 +71,10 @@ NODEV = $28                       ; no device connected
 WPERR = $2B                       ; write protect error
 
 DAN2CardIdLen = $05               ; check 5 bytes in ROM for card detection
-DAN2CardIdOfs = $08               ; offset where to find the DAN2 card's ID
+DAN2CardIdOfs = $0A               ; offset where to find the DAN2 card's ID
 DAN2CardId:
-          .BYTE $D0,$03,$9D       ; ROM bytes at offset $08: "BNE +3;STA $BFFB,X"
-          .BYTE $FB,$BF       
+          .BYTE $A9,$01           ; ROM bytes at offset $08: "BNE +3;STA $BFFB,X"
+          .BYTE $9D,$FB,$BF
 
 ;
 ; Parameter block for DAN2 commands

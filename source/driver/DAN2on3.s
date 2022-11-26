@@ -192,8 +192,8 @@ DCB_Idx:   .BYTE     $00                  ; DCB 0's blocks
            .BYTE     DIB1_Blks-DIB0_Blks  ; DCB 1's blocks
 
 DAN2CardIdLen = $05                       ; check 5 bytes in ROM for card detection
-DAN2CardIdOfs = $08                       ; offset where to find the DAN2 card's ID
-DAN2CardId:.BYTE     $D0,$03,$9D,$FB,$BF  ; ROM bytes at offset $08: "BNE +3;STA $BFFB,X"
+DAN2CardIdOfs = $0A                       ; offset where to find the DAN2 card's ID
+DAN2CardId:.BYTE     $A9,$01,$9D,$FB,$BF  ; ROM bytes at offset $08: "BNE +3;STA $BFFB,X"
 
 InitOK:    .BYTE     $00                  ; Have we initialized the DANII card successfully?
 LastError: .BYTE     $00                  ; Recent error RC from DAN2 card
