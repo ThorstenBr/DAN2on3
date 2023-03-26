@@ -5,7 +5,7 @@ The [DANII Controller Card](https://github.com/profdc9/Apple2Card) is a simple, 
 The Apple /// shares the same I/O slots as the Apple II family (even if the Apple /// only has 4 slots) but supports I/O cards to have a slightly larger physical dimension. However, while the DAN II controller fits nicely into the Apple /// slots, the Apple /// does not support the card's ROM boot menu. Also, a driver is required for the Apple /// SOS operating system.
 
 This projects provides an Apple /// SOS driver for the DAN II controller card: the DAN2on3 driver.
-Additionally, a separate configuration disk is provided to configure the DAN II controllers SD card slots, as a replacement for the boot menu - since Apple /// does not support boot ROMs.
+Additionally, a separate configuration disk is provided to configure the DAN II controllers SD card slots, as a replacement for the boot menu - since Apple /// does not support boot ROMs. See [bin](/bin) folder for prebuilt driver and disks.
 
 ## DAN II Controller as Apple /// Profile Replacement ##
 _Photo shows the original Apple /// Profile interface card (above) - which just provided the communication interface to the external Profile hard disk._
