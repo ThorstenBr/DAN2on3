@@ -28,19 +28,18 @@ The Apple /// does not support the DAN II controller's ROM boot configuration me
 
 However, since a separate disk is required anyway, a separate configuration disk ([Apple3SOS.DAN2on3.Config.dsk](/bin/Apple3SOS.DAN2on3.Config.dsk)) is provided. It provides the same configuration options as known from the controller's Apple II boot menu.
 
-As an advantage of the need for a separate disk, you get a slightly improved interface. The disk-based menu does not suffer from ROM space limitations.
-
 The configuration disk automatically detects whether the DAN II controller is plugged and in which slot.
-It also provides feedback on the status of the configured SD card volumes.
+It also shows the list of available volume files present on the SD cards.
 
-Configuration is otherwise identical as known from the Apple II:
-* Options "1"-"9" selects FAT filesystem, using the "BLKDEV01.PO", ..., "BLKDEV09.PO" image files.
+Configuration is identical/similar as known from the Apple II:
+* Options "1"-"9" and "A"-"F" selects the respective volume file from the SD-disk's FAT filesystem ("BLKDEV01.PO", ..., "BLKDEV09.PO", "BLKDEV0A.PO", ..., "BLKDEV0F.PO") image files.
 * Option "0" uses the SD slot in raw block mode.
-* Option "!" uses wide block mode.
+* The currently selected volume is highlighted.
+* Pressing RETURN keeps the current selection for the respective card.
 
-The same naming convention for the image files applies as for the Apple II. See Dan's [controller documentation](https://github.com/profdc9/Apple2Card) for details.
+See Dan's [controller documentation](https://github.com/profdc9/Apple2Card) for details.
 
-Apple III volume images of up to 32MB (65535 * 512 bytes) are supported. 16MB images are preferable (reportedly SOS has issues with larger images).
+Apple III SOS volume images of up to 16MB (32767 * 512 bytes) are supported. With Apple II ProDOS up to 32MB (65535 * 512 bytes) may be used, however, the larger 32MB images are not properly handled by Apple III SOS (though the file system itself is identical between Apple II ProDOS and Apple /// SOS).
 
 ![Apple III - DAN2on3 Configuration Menu](/photos/DAN2on3_ConfigMenu.jpg)
 
