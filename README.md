@@ -2,10 +2,10 @@
 
 The [DANII Controller Card](https://github.com/profdc9/Apple2Card) is a simple, easy to build SD controller card using easily available components for the Apple II.
 
-The Apple /// shares the same I/O slots as the Apple II family (even if the Apple /// only has 4 slots) but supports I/O cards to have a slightly larger physical dimension. However, while the DAN II controller will fits nicely into the Apple /// slots, the Apple /// does not support the card's ROM boot menu. Also, a driver is required for the Apple /// SOS operating system.
+The Apple /// shares the same I/O slots as the Apple II family (even if the Apple /// only has 4 slots) but supports I/O cards to have a slightly larger physical dimension. However, while the DAN II controller fits nicely into the Apple /// slots, the Apple /// does not support the card's ROM boot menu. Also, a driver is required for the Apple /// SOS operating system.
 
 This projects provides an Apple /// SOS driver for the DAN II controller card: the DAN2on3 driver.
-Additionally, a separate configuration disk is provided to configure the DAN II controllers SD card slots, as a replacement for the boot menu.
+Additionally, a separate configuration disk is provided to configure the DAN II controllers SD card slots, as a replacement for the boot menu - since Apple /// does not support boot ROMs.
 
 ## DAN II Controller as Apple /// Profile Replacement ##
 _Photo shows the original Apple /// Profile interface card (above) - which just provided the communication interface to the external Profile hard disk._
@@ -19,14 +19,14 @@ The DAN II controller is made to fit the slim Apple II case - so it has more tha
 * DAN II Controller SOS driver providing separate volumes for each SD card. SD slots 1 and 2 are mapped to SOS drives ".DAN1" and ".DAN2"... :-)
 * Faster than on the Apple II: the controller works fine at Apple ///'s full 2 MHz clock.
 * Separate Apple /// disk with DAN II Controller volume configuration.
-* Supports images of up to 32MB (65535 * 512 bytes). Smaller images are also supported. (Apparently 32MB images are problematic with SOS. So, preferably use 16MB images...)
+* Supports images of up to the maximum SOS volume size (16MB, 32767 * 512 bytes). Smaller images are also supported.
 * Automatic detection of the DAN II Controller slot (default). Manual slot configuration also supported.
-* Format support *not* available (yet). Currently you have to use preformatted disk images.
+* Format support is *not* available. Please use preformatted disk images (see [volumes](/volumes) folder for templates).
 
 # Controller Volume Configuration
-The Apple /// does not support the DAN II controller's ROM boot configuration menu ("DAN II PRESS RETURN" as known from the Apple II). You can manually invoke the ROM boot menu using the Apple II emulation disk on the Apple /// (load Apple II emulation disk, enter the system monitor, call the boot ROM routine).
+The Apple /// does not support the DAN II controller's ROM boot configuration menu ("DAN II PRESS RETURN" as known from the Apple II). You can manually invoke the ROM boot menu using the Apple II emulation disk on the Apple ///: load Apple II emulation disk, then enter "PR#1" in Apple BASIC to configure the controller plugged into slot 1 (PR#2 if plugged into slot #2 etc).
 
-However, since a separate disk is required anyway, a separate configuration disk ([Apple3SOS.DAN2on3.Config.dsk](/bin/Apple3SOS.DAN2on3.Config.dsk)) is provided. It provides the same configuration options as known from the controller's Apple II boot menu.
+However, since a separate disk is required anyway, a separate configuration disk ([Apple3SOS.DAN2on3.Config.dsk](/bin/Apple3SOS.DAN2on3.Config.dsk)) is provided for convenience. It provides the same configuration options as known from the controller's Apple II boot menu.
 
 The configuration disk automatically detects whether the DAN II controller is plugged and in which slot.
 It also shows the list of available volume files present on the SD cards.
