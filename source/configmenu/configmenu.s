@@ -81,8 +81,8 @@ DAN2_DoSetVol  = $07              ; select volumes in EEPROM
 DAN2CardIdLen = $05               ; check 5 bytes in ROM for card detection
 DAN2CardIdOfs = $0A               ; offset where to find the DAN2 card's ID
 DAN2CardId:
-          .BYTE $A9,$01           ; ROM bytes at offset $08: "BNE +3;STA $BFFB,X"
-          .BYTE $9D,$FB,$BF
+          .BYTE $A9,$01           ; ROM bytes at offset $0A: "LDA #$01"
+          .BYTE $9D,$FB,$BF       ; ROM bytes at offset $0C: "STA $BFFB,X"
 
 ;
 ; Parameter block for DAN2 commands
