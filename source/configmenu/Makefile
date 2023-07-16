@@ -1,6 +1,15 @@
 # DAN2on3 ConfigMenu Build Makefile
 # Thorsten Brehm, 2022
 
+# include file with version
+include ../../version.mk
+
+VER_MAJOR := $(word 1,$(subst ., ,$(VERSION)))
+VER_MINOR := $(word 2,$(subst ., ,$(VERSION)))
+VER_MAINT := $(word 3,$(subst ., ,$(VERSION)))
+
+VERSION_INFO := -DVER_MAJOR=$(VER_MAJOR) -DVER_MINOR=$(VER_MINOR) -DVER_MAINT=$(VER_MAINT)
+
 # assembler source
 ASM_FILE := configmenu.s
 # linked output
@@ -31,7 +40,7 @@ bin:
 
 bin/%.o: %.s Makefile
 	$(ECHO) "$(LOG_PREFIX) Compiling $<"
-	ca65 -l $(@:.o=.lst) $< -o $@
+	ca65 $(VERSION_INFO) -l $(@:.o=.lst) $< -o $@
 
 bin/%.o65: bin/%.o
 	$(ECHO) "$(LOG_PREFIX) Linking $@"
