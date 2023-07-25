@@ -112,25 +112,41 @@
             <context id="preprocessor" style-ref="preprocessor">
                 <prefix>(\.)</prefix>
                 <keyword>include</keyword>
+                <keyword>INCLUDE</keyword>
                 <keyword>require</keyword>
                 <keyword>macro</keyword>
                 <keyword>if</keyword>
+                <keyword>IF</keyword>
                 <keyword>ifdef</keyword>
                 <keyword>ifndef</keyword>
                 <keyword>ifnblank</keyword>
                 <keyword>else</keyword>
+                <keyword>ELSE</keyword>
                 <keyword>end</keyword>
                 <keyword>endif</keyword>
+                <keyword>ENDIF</keyword>
                 <keyword>endmacro</keyword>
                 <keyword>endproc</keyword>
                 <keyword>segment</keyword>
                 <keyword>setcpu</keyword>
                 <keyword>reloc</keyword>
                 <keyword>proc</keyword>
-                <keyword></keyword>
-                <keyword></keyword>
-                <keyword></keyword>
-                <keyword></keyword>
+            </context>
+
+            <context id="assemblercmds" style-ref="datatype">
+                <keyword>MSB</keyword>
+                <keyword>ORG</keyword>
+                <keyword>REL</keyword>
+                <keyword>DFB</keyword>
+                <keyword>EQU</keyword>
+                <keyword>DS</keyword>
+                <keyword>CHN</keyword>
+                <keyword>REP</keyword>
+                <keyword>PAGE</keyword>
+                <keyword>DO</keyword>
+                <keyword>ELSE</keyword>
+                <keyword>FIN</keyword>
+                <keyword>SBTL</keyword>
             </context>
 
             <context id="data-types" style-ref="datatype">
@@ -147,6 +163,11 @@
 
             <context id="comment" style-ref="comment">
                 <start>\;</start>
+                <end>$</end>
+            </context>
+
+            <context id="comment2" style-ref="comment">
+                <start>^\*</start>
                 <end>$</end>
             </context>
 
