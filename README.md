@@ -5,13 +5,13 @@ The [DANII Controller Card](https://github.com/profdc9/Apple2Card) is a simple, 
 The Apple /// shares the same I/O slots as the Apple II family (even if the Apple /// only has 4 slots) but supports I/O cards to have a slightly larger physical dimension. However, while the DAN II controller fits nicely into the Apple /// slots, the Apple /// does not support the card's ROM boot menu. Also, a driver is required for the Apple /// SOS operating system.
 
 This projects provides an Apple /// SOS driver for the DAN II controller card: the DAN2on3 driver.
-Additionally, a separate configuration disk is provided to configure the DAN II controllers SD card slots, as a replacement for the boot menu - since Apple /// does not support boot ROMs. See [bin](/bin) folder for prebuilt driver and disks.
+Additionally, a separate configuration disk is provided to configure the DAN II controllers SD card slots, as a replacement for the boot menu - since Apple /// does not support boot ROMs. See [releases](https://github.com/ThorstenBr/DAN2on3/releases) for prebuilt driver and disks.
 
 ## DAN II Controller as Apple /// Profile Replacement ##
 _Photo shows the original Apple /// Profile interface card (above) - which just provided the communication interface to the external Profile hard disk._
 _Photo below is the DAN II Controller card - which includes everything - even the two SD cards as hard disk replacements)._
 
-![Apple III Profile Controller Cards vs DAN II Controller Card](/photos/DAN2vsPROFILE.jpg)
+![Apple III Profile Controller Cards vs DAN II Controller Card](photos/DAN2vsPROFILE.jpg)
 
 The DAN II controller is made to fit the slim Apple II case - so it has more than enough space in an Apple ///. Unfortunately the SD cards are facing towards the inside of the Apple ///. This layout made sense on the Apple II, where cards cannot be accessed from the outside. Indeed, for the Apple /// a different layout would haven been preferable, placing the SD cards on the other edge of the controller card. But, we'll have to live with that... :)
 
@@ -26,7 +26,7 @@ The DAN II controller is made to fit the slim Apple II case - so it has more tha
 # Controller Volume Configuration
 The Apple /// does not support the DAN II controller's ROM boot configuration menu ("DAN II PRESS RETURN" as known from the Apple II). You can manually invoke the ROM boot menu using the Apple II emulation disk on the Apple ///: load Apple II emulation disk, then enter "PR#1" in Apple BASIC to configure the controller plugged into slot 1 (PR#2 if plugged into slot #2 etc).
 
-However, since a separate disk is required anyway, a separate configuration disk ([Apple3SOS.DAN2on3.Config.dsk](/bin/Apple3SOS.DAN2on3.Config.dsk)) is provided for convenience. It provides the same configuration options as known from the controller's Apple II boot menu.
+However, since a separate disk is required anyway, a separate configuration disk "Apple3SOS.DAN2on3.Config.dsk" is provided for convenience. It provides the same configuration options as known from the controller's Apple II boot menu.
 
 The configuration disk automatically detects whether the DAN II controller is plugged and in which slot.
 It also shows the list of available volume files present on the SD cards.
@@ -41,13 +41,13 @@ See Dan's [controller documentation](https://github.com/profdc9/Apple2Card) for 
 
 Apple III SOS volume images of up to 16MB (32767 * 512 bytes) are supported. With Apple II ProDOS up to 32MB (65535 * 512 bytes) may be used, however, the larger 32MB images are not properly handled by Apple III SOS (though the file system itself is identical between Apple II ProDOS and Apple /// SOS).
 
-![Apple III - DAN2on3 Configuration Menu](/photos/DAN2on3_ConfigMenu.jpg)
+![Apple III - DAN2on3 Configuration Menu](photos/DAN2on3_ConfigMenu.jpg)
 
 # DAN2on3 SOS Driver
 To make the SD slots available in Apple /// SOS, add the DAN2ON3.DRIVER to the SOS.DRIVER file of your Apple /// boot disk.
-The [Apple3SOS.DAN2on3.Config.dsk](/bin/Apple3SOS.DAN2on3.Config.dsk) (with the card's configuration menu) also contains the necessary DAN2ON3.DRIVER file, which you can read using your Apple /// SOS System Utilities disk.
+The "Apple3SOS.DAN2on3.Config.dsk" (with the card's configuration menu) also contains the necessary DAN2ON3.DRIVER file, which you can read using your Apple /// SOS System Utilities disk.
 
-You can also use the separately provided [Apple3SOS.DAN2on3.SysUtils.dsk](/bin/Apple3SOS.DAN2on3.SysUtils.dsk) which provides the System Utilities for SOS 1.3 - and is already preconfigured with the DAN2ON3.DRIVER.
+You can also use the separately provided "Apple3SOS.DAN2on3.SysUtils.dsk" which provides the System Utilities for SOS 1.3 - and is already preconfigured with the DAN2ON3.DRIVER.
 
 By default, the SOS driver automatically detects the slot occupied by the DAN II controller.
 You can also use manual configuration, however, as this was usual for Apple /// drivers.
@@ -60,7 +60,7 @@ If you wish to manually configure the slot:
 * Change "Slot Number" as required. Slot auto-detection is enabled (default) when "??" is shown instead of a specific slot number.
 * Finally select "Generate New System" and write the new configuration to your boot disk.
 
-![Apple III - DAN2on3 SOS Slot Configuration](/photos/DAN2on3_SlotConfig2.jpg)
+![Apple III - DAN2on3 SOS Slot Configuration](photos/DAN2on3_SlotConfig2.jpg)
 
 ## Caveats
 *Auto-detection not working*: The driver does support slot auto-detection of the DAN II Controller, however, this may not work if your SOS.DRIVER file contains another driver which is configured to occupy a specific slot.
@@ -75,7 +75,7 @@ Once the driver is installed in your Apple ///'s SOS.DRIVER, you have two new dr
 These volumes otherwise work as any other volume.
 Support for formatting is currently not enabled. For now, you have to use preformatted volume images.
 
-![Apple III - DAN2on3 Usage](/photos/DAN2on3_FilerList.jpg)
+![Apple III - DAN2on3 Usage](photos/DAN2on3_FilerList.jpg)
 
 # Building
 * Uses standard GNU makefiles usable for Linux and Windows WSL environment. Just run "make" in the root folder to build.
@@ -83,4 +83,4 @@ Support for formatting is currently not enabled. For now, you have to use prefor
 * The [ca65](https://github.com/cc65/cc65) 6502 assembler from  Ullrich von Bassewitz is required.
 * A utility ([A3Driverutil](https://github.com/robjustice/a3driverutil)) by Robert Justice to manipulate Apple /// SOS.DRIVER files is included.
 
-A prebuilt driver and disks are available in the [bin](/bin) folder.
+A prebuilt driver and disks in various formats are available. See [releases](https://github.com/ThorstenBr/DAN2on3/releases).
