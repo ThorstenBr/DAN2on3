@@ -21,6 +21,7 @@ OUTPUT_DISK := bin/Apple3SOS.DAN2on3.Config.dsk
 # Temporary disk file
 TEMP_DISK := bin/temp.dsk
 # Build Utilities
+DSK2PO     := python3 ../../tools/dsk2po/dsk2po.py
 APPLE_BOOT := python3 ../../tools/AppleBoot/makeAppleBootDisk.py
 AppleCommander := java -jar ../../tools/AppleCommander/AppleCommander-ac-1.8.0.jar
 
@@ -63,6 +64,7 @@ $(OUTPUT_DISK): $(O65_FILE)
 	$(APPLE_BOOT) $< $(TEMP_DISK) $(OUTPUT_DISK)
 	rm $(TEMP_DISK)
 	cp $@ ../../bin/.
+	$(DSK2PO) ../../bin/$(notdir $@)
 
 # show disk contents
 list:

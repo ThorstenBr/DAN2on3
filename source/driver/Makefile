@@ -15,6 +15,7 @@ TEMP_DISK   := bin/_Apple3SOS.SysUtils.dsk
 OUTPUT_DISK := bin/Apple3SOS.DAN2on3.SysUtils.dsk
 
 # Build Utilities
+DSK2PO    := python3 ../../tools/dsk2po/dsk2po.py
 A3DU_PATH := ../../tools/A3Driverutil
 A3DriverUtil := python $(A3DU_PATH)/a3driverutil.py
 AppleCommander := java -jar ../../tools/AppleCommander/AppleCommander-ac-1.8.0.jar
@@ -63,6 +64,7 @@ $(OUTPUT_DISK): bin/SOS.DRIVER $(DAN2ON3_DRIVER) $(SOURCE_DISK)
 	cat bin/SOS.DRIVER | $(AppleCommander) -p $(TEMP_DISK) SOS.DRIVER SOS
 	mv $(TEMP_DISK) $@
 	cp $@ ../../bin/.
+	$(DSK2PO) ../../bin/$(notdir $@)
 
 # show disk contents
 list:
