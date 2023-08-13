@@ -14,7 +14,7 @@
 ;FORMAT_SUPPORT = 1               ; disabled for now (not implemented yet)
 ;UART_DEBUGGING = 1               ; enable/disable DEBUG output
 
-DriverVersion   = $1010           ; Driver Version 1.0.1 ($ABC0 = A.B.C)
+DriverVersion   = $1100           ; Driver Version 1.0.1 ($ABC0 = A.B.C)
 DriverVendor    = $5442           ; Driver Vendor "TB"
 .IFDEF FORMAT_SUPPORT
 DriverType      = $D1             ; Block device/Write/non-removable/format support
@@ -208,7 +208,8 @@ Entry:    LDA SOS_Unit               ; SOS volume unit number (0, 1)
           CLC                        ; map SOS unit 0 => DAN card unit 0; SOS unit 1 => DAN card unit $80
           ROR
           ROR
-          STA DAN2Unit               ; store DAN card unit number (SD slot1 = $00; SD slot 2=$80)
+          AND #$80                   ; make sure it's only SD slot1 = $00 or SD slot 2=$80
+          STA DAN2Unit               ; store DAN card unit number
           JSR Dispatch               ; Call the dispatcher
           LDX SOS_Unit               ; Get drive number for this unit
           LDA ReqCode                ; Keep request around for D_REPEAT
@@ -308,7 +309,6 @@ Match:    TXA                        ; get slot number
 UnitInit:
           LDA InitOK                 ; Did we previously find a card?
           BEQ NoDevice               ; If not... then bail
-          LDA DAN2Unit               ; Which unit did we get called with?
 
           LDA #$00                   ; clear parameters
           STA DAN2Buf
@@ -844,7 +844,9 @@ DAN2_GetX:
           ASL A
           ASL A
           ASL A
-          ORA #$88                   ; add $88 to it so we can address from page $BF ($BFF8-$BFFB)
+          ORA DAN2Unit               ; encode slot number in upper 4 bits of DAN2 unit number
+          STA DAN2Unit               ; update DAN2 unit number (bit 7=selects SD slot 1 or 2, bits 6-4 selects Apple slot)
+          ORA #$88                   ; adjust address, so we can address from page $BF ($BFF8-$BFFB)
                                      ; this works around 6502 phantom read
           TAX
           RTS
