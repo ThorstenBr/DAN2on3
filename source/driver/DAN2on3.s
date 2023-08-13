@@ -14,7 +14,7 @@
 ;FORMAT_SUPPORT = 1               ; disabled for now (not implemented yet)
 ;UART_DEBUGGING = 1               ; enable/disable DEBUG output
 
-DriverVersion   = $1100           ; Driver Version 1.0.1 ($ABC0 = A.B.C)
+DriverVersion   = $2000           ; Driver Version 2.0.0 ($ABC0 = A.B.C)
 DriverVendor    = $5442           ; Driver Vendor "TB"
 .IFDEF FORMAT_SUPPORT
 DriverType      = $D1             ; Block device/Write/non-removable/format support

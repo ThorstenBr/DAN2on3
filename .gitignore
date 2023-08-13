@@ -1,8 +1,11 @@
 info
 *.o65
 *.o
-bin/SOS.DRIVER.original
+bin/*
 source/driver/bin/*
 source/configmenu/bin/*
 OLD
 BACKUP
+blog
+*.dsk
+*.po
