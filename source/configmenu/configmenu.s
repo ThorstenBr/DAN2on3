@@ -206,7 +206,7 @@ boot:
           LDA #$00
           STA BANKREG                    ; bank 0 select
           STA GVOLDRIVE0
-          StA GVOLDRIVE1
+          STA GVOLDRIVE1
           LDX #$FB                       ; set stack
           TXS
           JSR CLRSCR                     ; init screen
@@ -323,7 +323,6 @@ UNITLOOP:
           STA VOLDRIVE1
           JSR SETVOL
 
-
           LDY GVOLDRIVE0
           LDA #0          ; start at column 0
           JSR DISPVOLUME  ; show item number and volume name
@@ -364,7 +363,7 @@ DAN2Init:
           CPY #$06                ; initialize 6 bytes
           BNE @0
 DAN2FindCard:                     ; let's find the card in any slot
-          LDA $C1                 ; start with slot 1
+          LDA #$C1                ; start with slot 1
           STA HIGHBT              ; setup the address
           LDA #DAN2CardIdOfs      ; store offset of ID in ROM 
           STA LOWBT               ; lower address offset
