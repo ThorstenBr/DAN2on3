@@ -32,8 +32,7 @@ The configuration disk automatically detects whether the DAN II controller is pl
 It also shows the list of available volume files present on the SD cards.
 
 Configuration is identical/similar as known from the Apple II:
-* Options "1"-"9" and "A"-"F" selects the respective volume file from the SD-disk's FAT filesystem ("BLKDEV01.PO", ..., "BLKDEV09.PO", "BLKDEV0A.PO", ..., "BLKDEV0F.PO") image files.
-* Option "0" uses the SD slot in raw block mode.
+* Options "0"-"9" and "A"-"F" selects the respective volume file from the SD-disk (e.g. the respective "BLKDEV00.PO", ..., "BLKDEV0F.PO", or, when using new firmware, "VOL00...PO", "VOL0F...PO").
 * The currently selected volume is highlighted.
 * Pressing RETURN keeps the current selection for the respective card.
 
@@ -44,7 +43,7 @@ Apple III SOS volume images of up to 16MB (32767 * 512 bytes) are supported. Wit
 ![Apple III - DAN2on3 Configuration Menu](photos/DAN2on3_ConfigMenu.jpg)
 
 # DAN2on3 SOS Driver
-To make the SD slots available in Apple /// SOS, add the DAN2ON3.DRIVER to the SOS.DRIVER file of your Apple /// boot disk.
+To make the SD slots available in *Apple /// SOS*, add the **DAN2ON3.DRIVER** to the **SOS.DRIVER** file of your Apple /// boot disk.
 The "Apple3SOS.DAN2on3.Config.dsk" (with the card's configuration menu) also contains the necessary DAN2ON3.DRIVER file, which you can read using your Apple /// SOS System Utilities disk.
 
 You can also use the separately provided "Apple3SOS.DAN2on3.SysUtils.dsk" which provides the System Utilities for SOS 1.3 - and is already preconfigured with the DAN2ON3.DRIVER.
@@ -53,12 +52,12 @@ By default, the SOS driver automatically detects the slot occupied by the DAN II
 You can also use manual configuration, however, as this was usual for Apple /// drivers.
 
 If you wish to manually configure the slot:
-* Enter SCP (System Configuration Program).
-* Load your SOS.DRIVER file.
-* Read and add the DAN2ON3.DRIVER from the configuration disk.
-* Select "Edit Driver Parameters" and select the ".DAN1" (or ".DAN2") device.
-* Change "Slot Number" as required. Slot auto-detection is enabled (default) when "??" is shown instead of a specific slot number.
-* Finally select "Generate New System" and write the new configuration to your boot disk.
+* Enter the *System Configuration Program* (SCP).
+* Load your *SOS.DRIVER* file.
+* Read and add the **DAN2ON3.DRIVER** from the configuration disk.
+* Select "*Edit Driver Parameters*" and select the "**.DAN1**" (or "**.DAN2**") device.
+* Change "*Slot Number*" as required. Slot auto-detection is enabled by default - and "??" is shown instead of a specific slot number.
+* Finally select "*Generate New System*" and write the new configuration to your boot disk.
 
 ![Apple III - DAN2on3 SOS Slot Configuration](photos/DAN2on3_SlotConfig2.jpg)
 
@@ -69,10 +68,11 @@ SOS blocks the request of a driver, when the requested slot is already allocated
 
 # Usage
 Once the driver is installed in your Apple ///'s SOS.DRIVER, you have two new drives:
-* .DAN1 for the volume in SD slot 1
-* .DAN2 for the volume in SD slot 2
+* **.DAN1** for the first configured DAN][ volume
+* **.DAN2** for the second configured DAN][ volume
 
-These volumes otherwise work as any other volume.
+These volumes otherwise work as any other volume. The names *.DAN1*, *.DAN2* are only defaults. Some Apple /// programs, such as *Selector III*, only accept devices with the original Apple /// hard disk name **.PROFILE**. You can rename the default device names of the driver if necessary. Use the *System Configuration Program (SCP)* to rename *.DAN1* to *.PROFILE*, for example.
+
 Support for formatting is currently not enabled. For now, you have to use preformatted volume images.
 
 ![Apple III - DAN2on3 Usage](photos/DAN2on3_FilerList.jpg)
