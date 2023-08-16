@@ -36,7 +36,7 @@ Configuration is identical/similar as known from the Apple II:
 * The currently selected volume is highlighted.
 * Pressing RETURN keeps the current selection for the respective card.
 
-See Dan's [controller documentation](https://github.com/profdc9/Apple2Card) for details.
+See the [DANII controller documentation](https://github.com/ThorstenBr/Apple2Card) for details.
 
 Apple III SOS volume images of up to 16MB (32767 * 512 bytes) are supported. With Apple II ProDOS up to 32MB (65535 * 512 bytes) may be used, however, the larger 32MB images are not properly handled by Apple III SOS (though the file system itself is identical between Apple II ProDOS and Apple /// SOS).
 
