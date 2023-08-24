@@ -1,0 +1,1127 @@
+ca65 V2.19 - Git ad7c5a661
+Main file   : diskio.s
+Current file: diskio.s
+
+000000r 1               ;*********************************************************
+000000r 1               ;* APPLE /// ROM - DISK I/O ROUTINES
+000000r 1               ;* COPYRIGHT 1979 BY APPLE COMPUTER, INC.
+000000r 1               ;*********************************************************
+000000r 1               
+000000r 1                          .setcpu "6502"
+000000r 1               		   .segment "CODE"
+000000r 1               
+000000r 1               ;           .PROC   DISKIO
+000000r 1                          .ORG    $F000
+00F000  1               
+00F000  1               ;**************************
+00F000  1               ;     CRITICAL TIMING     *
+00F000  1               ;   REQUIRES PAGE BOUND   *
+00F000  1               ;   CONSIDERATIONS FOR    *
+00F000  1               ;   CODE AND DATA         *
+00F000  1               ;   -----CODE-----        *
+00F000  1               ;   VIRTUALLY THE ENTIRE  *
+00F000  1               ;     'WRITE' ROUTINE     *
+00F000  1               ;      MUST NOT CROSS     *
+00F000  1               ;     PAGE BOUNDARIES     *
+00F000  1               ;   CRITICAL BRANCHES IN  *
+00F000  1               ;   THE 'WRITE', 'READ',  *
+00F000  1               ;   AND 'READ ADR' SUBRS  *
+00F000  1               ;   WHICH MUST NOT CROSS  *
+00F000  1               ;   PAGE BOUNDARIES ARE   *
+00F000  1               ;   NOTED IN COMMENTS     *
+00F000  1               ;                         *
+00F000  1               ;**************************
+00F000  1               ;                         *
+00F000  1               ;   EQUATES               *
+00F000  1               ;                         *
+00F000  1               NBUF1      =    $0200
+00F000  1               NBUF2      =    $0302        ; (ZERO PAGE AT $300)
+00F000  1               
+00F000  1               HRDERRS    =    $80
+00F000  1               DVMOT      =    $E0
+00F000  1               
+00F000  1               IBSLOT     =    $81
+00F000  1               IBDRVN     =    IBSLOT+1
+00F000  1               IBTRK      =    IBSLOT+2
+00F000  1               IBSECT     =    IBSLOT+3
+00F000  1               IBBUFP     =    IBSLOT+4     ; & 5
+00F000  1               IBCMD      =    IBSLOT+6
+00F000  1               IBSTAT     =    IBSLOT+7
+00F000  1               IBSMOD     =    IBSLOT+8
+00F000  1               CSUM       =    IBSMOD       ; USED ALSO FOR ADDRESS HEADER CKSUM
+00F000  1               IOBPDN     =    IBSLOT+9
+00F000  1               IMASK      =    IBSLOT+$A
+00F000  1               CURTRK     =    IBSLOT+$B
+00F000  1               DRVOTRK    =    CURTRK-7
+00F000  1               ; SLOT 4, DRIVE 1
+00F000  1               ; SLOT 4, DRIVE 2
+00F000  1               ; SLOT 5, DRIVE 1
+00F000  1               ; SLOT 5, DRIVE 2
+00F000  1               ; SLOT 6, DRIVE 1
+00F000  1               ; SLOT 6, DRIVE 2
+00F000  1               RETRYCNT   =    IBSLOT+$12
+00F000  1               SEEKCNT    =    IBSLOT+$13
+00F000  1               BUF        =    IBSLOT+$1A
+00F000  1               ENVTEMP    =    IBSLOT+$1E
+00F000  1               ; IBSLOT+$1F NOT USED
+00F000  1               
+00F000  1               ;**************************
+00F000  1               ;                         *
+00F000  1               ;    ----READADR----      *
+00F000  1               ;                         *
+00F000  1               ;**************************
+00F000  1               
+00F000  1               COUNT      =    IBSLOT+$14   ; 'MUST FIND' COUNT.
+00F000  1               LAST       =    IBSLOT+$14   ; 'ODD BIT' NIBLS.
+00F000  1               CKSUM      =    IBSLOT+$15   ; CHECKSUM BYTE.
+00F000  1               CSSTV      =    IBSLOT+$16   ; FOUR BYTES
+00F000  1               ;          CHECKSUM, SECTOR, TRACK, AND VOLUME.
+00F000  1               ;
+00F000  1               ;**************************
+00F000  1               ;                         *
+00F000  1               ;                         *
+00F000  1               ;                         *
+00F000  1               ;   USES ALL NBUFS        *
+00F000  1               ;   AND 32-BYTE           *
+00F000  1               ;   DATA TABLE    'NISI,' *
+00F000  1               ;                         *
+00F000  1               ;**************************
+00F000  1               ;
+00F000  1               ;**************************
+00F000  1               ;                         *
+00F000  1               ;                         *
+00F000  1               ;                         *
+00F000  1               ;    USES ALL NBUFS       *
+00F000  1               ;    USES LAST 54 BYTES   *
+00F000  1               ;    OF A CODE PAGE FOR   *
+00F000  1               ;    SIGNIFICANT BYTES    *
+00F000  1               ;    OF DNIBL TABLE.      *
+00F000  1               ;                         *
+00F000  1               ;**************************
+00F000  1               ;
+00F000  1               ;**************************
+00F000  1               ;                         *
+00F000  1               ;    ----SEEK----         *
+00F000  1               ;                         *
+00F000  1               ;**************************
+00F000  1               ;
+00F000  1               TRKCNT     =    COUNT        ; HALFTRACKS MOVED COUNT.
+00F000  1               PRIOR      =    IBSLOT+$1C
+00F000  1               TRKN       =    IBSLOT+$1D
+00F000  1               
+00F000  1               ;**************************
+00F000  1               ;                         *
+00F000  1               ;     ----MSWAIT----      *
+00F000  1               ;                         *
+00F000  1               ;**************************
+00F000  1               
+00F000  1               MONTIMEL   =    CSSTV+2      ; MOTOR-ON TIME
+00F000  1               MONTIMEH   =    MONTIMEL+1   ; COUNTERS.
+00F000  1               
+00F000  1               ;**************************
+00F000  1               ;                         *
+00F000  1               ;    DEVICE ADDRESS       *
+00F000  1               ;    ASSIGNMENTS          *
+00F000  1               ;                         *
+00F000  1               ;**************************
+00F000  1               
+00F000  1               PHASEOFF   =    $C080        ; STEPPER PHASE OFF.
+00F000  1               PHASEON    =    $C081        ; STEPPER PHASE ON.
+00F000  1               Q6L        =    $C08C        ; Q7L,Q6L=READ
+00F000  1               Q6H        =    $C08D        ; Q7L,Q6H=SENSE WPROT
+00F000  1               Q7L        =    $C08E        ; Q7H,Q6L=WRITE
+00F000  1               Q7H        =    $C08F        ; Q7H,Q6H=WRITE STORE
+00F000  1               INTERUPT   =    $FFEF
+00F000  1               ENVIRON    =    $FFDF
+00F000  1               ONEMEG     =    $80
+00F000  1               TWOMEG     =    $7F
+00F000  1               
+00F000  1               ;******************************
+00F000  1               ;
+00F000  1               ; EQUATES FOR RWTS AND BLOCK
+00F000  1               ;
+00F000  1               ;******************************
+00F000  1               
+00F000  1               MOTOROFF   =    $C088
+00F000  1               MOTORON    =    $C089
+00F000  1               DRVOEN     =    $C08A
+00F000  1               DRV1EN     =    $C08B
+00F000  1               PHASON     =    $C081
+00F000  1               PHSOFF     =    $C080
+00F000  1               TEMP       =    CSSTV        ; PUT ADDRESS INFO HERE
+00F000  1               CSUM1      =    TEMP
+00F000  1               SECT       =    CSUM1+1
+00F000  1               TRACK      =    SECT+1
+00F000  1               TRKN1      =    TRACK
+00F000  1               VOLUME     =    TRACK+1
+00F000  1               IBRERR     =    HRDERRS+3
+00F000  1               IBDERR     =    HRDERRS+2
+00F000  1               IBWPER     =    HRDERRS+1
+00F000  1               IBNODRV    =    HRDERRS
+00F000  1               ;
+00F000  1               ;**************************
+00F000  1               ;                         *
+00F000  1               ;   READ WRITE A          *
+00F000  1               ;   TRACK AND SECTOR      *
+00F000  1               ;                         *
+00F000  1               ;**************************
+00F000  1               
+00F000  1  A0 01        REGRWTS:   LDY     #01          ; RETRY COUNT
+00F002  1  A6 81                   LDX     IBSLOT       ; GET SLOT # FOR THIS OPERATION
+00F004  1  84 94                   STY     SEEKCNT      ; ONLY ONE RECALIBRATE PER CALL
+00F006  1  A9 05                   LDA     #05
+00F008  1  85 8F                   STA     $8F
+00F00A  1  08                      PHP                  ; DETERMINE INTERRUPT STATUS
+00F00B  1  68                      PLA
+00F00C  1  6A                      ROR     A
+00F00D  1  6A                      ROR     A            ; GET INTERRUPT FLAG INTO BIT 7
+00F00E  1  6A                      ROR     A
+00F00F  1  6A                      ROR     A
+00F010  1  85 8B                   STA     IMASK
+00F012  1  AD DF FF                LDA     ENVIRON      ; PRESERVE ENVIRONMENT
+00F015  1  85 9F                   STA     ENVTEMP
+00F017  1  20 2B F1                JSR     CHKDRV       ; SET ZERO FLAG IF MOTOR STOPPED
+00F01A  1  08                      PHP                  ; SAVE TEST RESULTS
+00F01B  1  A5 85                   LDA     IBBUFP       ; MOVE OUT POINTER TO BUFFER INTO ZPAGE
+00F01D  1  85 9B                   STA     BUF
+00F01F  1  A5 86                   LDA     IBBUFP+1
+00F021  1  85 9C                   STA     BUF+1
+00F023  1  A9 E0                   LDA     #DVMOT
+00F025  1  85 9A                   STA     MONTIMEH
+00F027  1  A5 82                   LDA     IBDRVN       ; DETERMINE DRIVE ONE OR TWO
+00F029  1  C5 8A                   CMP     IOBPDN       ; SAME DRIVE USED BEFORE
+00F02B  1  85 8A                   STA     IOBPDN       ; SAVE IT FOR NEXT TIME
+00F02D  1  08                      PHP                  ; KEEP RESULTS OF COMPARE
+00F02E  1  6A                      ROR     A            ; GET DRIVE NUMBER INTO CARRY
+00F02F  1  BD 89 C0                LDA     MOTORON,X    ; TURN ON THE DRIVE
+00F032  1  90 01                   BCC     DRIVSEL      ; BRANCH IF DRIVE 1 SELECTED
+00F034  1  E8                      INX                  ; SELECT DRIVE 2
+00F035  1  BD 8A C0     DRIVSEL:   LDA     DRVOEN,X
+00F038  1  20 4C F3                JSR     SET1MEG      ; INSURE ONE MEGAHERTZ OPERATION
+00F03B  1  28                      PLP                  ; WAS IT SAME DRIVE?
+00F03C  1  F0 0A                   BEQ     OK
+00F03E  1  28                      PLP                  ; MUST INDICATE DRIVE OFF BY SETTING ZERO FLAG
+00F03F  1  A0 07                   LDY     #07          ; DELAY 150 MS BEFORE STEPPING
+00F041  1  20 56 F4     DRVWAIT:   JSR     MSWAIT       ; (ON RETURN A=0)
+00F044  1  88                      DEY
+00F045  1  D0 FA                   BNE     DRVWAIT
+00F047  1  08                      PHP                  ; NOW ZERO FLAG SET
+00F048  1  A5 83        OK:        LDA     IBTRK        ; GET DESTINATION TRACK
+00F04A  1  A6 81                   LDX     IBSLOT       ; RESTORE PROPER X (SLOT*16)
+00F04C  1  20 04 F1                JSR     MYSEEK       ; AND GO TO IT
+00F04F  1               ; NOW AT THE DESIRED TRACK WAS THE MOTOR ON TO START WITH?
+00F04F  1  28                      PLP                  ; WAS MOTOR ON?
+00F050  1  D0 17                   BNE     TRYTRK       ; IF SO, DON'T DELAY, GET IT TODAY!
+00F052  1               
+00F052  1               ; MOTOR WAS OFF, WAIT FOR IT TO SPEED UP
+00F052  1               
+00F052  1  A0 12        MOTOF:     LDY     #$12         ; WAIT EXACTLY 100 US FOR EACH COUNT
+00F054  1  88           CONWAIT:   DEY                  ; IN MONTIME
+00F055  1  D0 FD                   BNE     CONWAIT
+00F057  1  E6 99                   INC     MONTIMEL     ; COUNT UP TO 0000
+00F059  1  D0 F7                   BNE     MOTOF
+00F05B  1  E6 9A                   INC     MONTIMEH
+00F05D  1  30 F3                   BMI     MOTOF
+00F05F  1               ;
+00F05F  1               ;******************************
+00F05F  1               ; MOTOR SHOULD BE UP TO SPEED
+00F05F  1               ; IF IT STILL LOOKS STOPPED THEN
+00F05F  1               ; THE DRIVE IS NOT PRESENT.
+00F05F  1               ;
+00F05F  1               ;******************************
+00F05F  1               ;
+00F05F  1  20 2B F1                JSR     CHKDRV       ; IS DRIVE PRESENT?
+00F062  1  D0 05                   BNE     TRYTRK       ; YES, CONTINUE
+00F064  1  A9 80        NODRIVERR: LDA     #IBNODRV     ; NO, GET TELL EM NO DRIVE
+00F066  1  4C EA F0                JMP     HNDLERR
+00F069  1               ;
+00F069  1               ; NOW CHECK IF IT IS NOT THE FORMAT DISK COMMAND,
+00F069  1               ; LOCATE THE CORRECT SECTOR FOR THIS OPERATION F069
+00F069  1               ;
+00F069  1  A5 87        TRYTRK:    LDA     IBCMD        ; GET COMMAND CODE #
+00F06B  1  F0 76                   BEQ     ALLDONE      ; IF NULL COMMAND, GO HOME TO BED
+00F06D  1  C9 03                   CMP     #03          ; COMMAND IN RANGE?
+00F06F  1  B0 72                   BCS     ALLDONE      ; NO, DO NOTHING!
+00F071  1  6A                      ROR     A            ; SET CARRY=1 FOR READ, 0 FOR WRITE
+00F072  1  B0 0B                   BCS     TRYTRK2      ; MUST PRENIBBLIZE FOR WRITE
+00F074  1  AD DF FF                LDA     ENVIRON
+00F077  1  29 7F                   AND     #TWOMEG      ; SHIFT TO HIGH SPEED!
+00F079  1  8D DF FF                STA     ENVIRON
+00F07C  1  20 C4 F2                JSR     PRENIB16
+00F07F  1  A0 7F        TRYTRK2:   LDY     #$7F         ; ONLY 127 RETRIES OF ANY KIND
+00F081  1  84 93                   STY     RETRYCNT
+00F083  1  A6 81        TRYADR:    LDX     IBSLOT       ; GET SLOT NUM INTO X-REG
+00F085  1  20 B9 F1                JSR     RDADR16      ; READ NEXT ADDRESS FIELD
+00F088  1  90 22                   BCC     RDRIGHT      ; IF READ IS RIGHT, HURRAH!
+00F08A  1  20 AA F1     TRYADR2:   JSR     CHKINT       ; BRANCH TO CHECK FOR INTERRUPTS
+00F08D  1  C6 93                   DEC     RETRYCNT     ; ANOTHER MISTAKE!!
+00F08F  1  10 F2                   BPL     TRYADR       ; WELL, LET IT GO THIS TIME
+00F091  1  C6 94                   DEC     SEEKCNT      ; ONLY RECALIBRATE ONCE!
+00F093  1  D0 53                   BNE     DRVERR       ; TRIED TO RECALIBRATE A SECOND TIME, ERROR!
+00F095  1  A5 8F                   LDA     $8F          ; ANOTHER MISTAKE!!
+00F097  1  30 E6                   BMI     TRYTRK2      ; WELL, LET IT GO THIS TIME
+00F099  1  A5 8C                   LDA     CURTRK
+00F09B  1  48                      PHA                  ; SAVE TRACK WE REALLY WANT
+00F09C  1  A9 60                   LDA     #$60         ; RECALIBRATE ALL OVER AGAIN!    ERROR!
+00F09E  1  20 25 F1                JSR     SETTRK       ; PRETEND TO BE ON TRACK 80
+00F0A1  1  A9 00                   LDA     #00
+00F0A3  1  20 04 F1                JSR     MYSEEK       ; MOVE TO TRACK 00
+00F0A6  1  68           GOCAL1:    PLA
+00F0A7  1  20 04 F1     GOCAL:     JSR     MYSEEK       ; GO TO CORRECT TRACK THIS TIME!
+00F0AA  1  90 D3                   BCC     TRYTRK2      ; LOOP BACK, TRY AGAIN ON THIS TRACK FOAC
+00F0AC  1               ; HAVE NOW READ AN ADDRESS FIELD CORRECTLY.
+00F0AC  1               ; MAKE SURE THIS IS THE TRACK, SECTOR, AND VOLUME DESIRED.
+00F0AC  1  A4 99        RDRIGHT:   LDY     TRACK        ; ON THE RIGHT TRACK?
+00F0AE  1  C4 8C                   CPY     CURTRK
+00F0B0  1  F0 0E                   BEQ     RTTRK        ; IF SO, GOOD
+00F0B2  1               ;
+00F0B2  1               ; RECALIBRATING FROM THIS TRACK
+00F0B2  1               ;
+00F0B2  1  A5 8C                   LDA     CURTRK       ; PRESERVE DESTINATION TRACK
+00F0B4  1  48                      PHA
+00F0B5  1  98                      TYA
+00F0B6  1  0A                      ASL     A
+00F0B7  1  20 25 F1                JSR     SETTRK
+00F0BA  1  68                      PLA
+00F0BB  1  20 04 F1                JSR     MYSEEK
+00F0BE  1  90 CA                   BCC     TRYADR2
+00F0C0  1  A5 9A        RTTRK:     LDA     VOLUME       ; GET ACTUAL VOLUME HERE
+00F0C2  1  85 89                   STA     IBSMOD       ; TELL OPSYS WHAT VOLUME WAS THERE
+00F0C4  1  A5 98        CORRECTVOL: LDA     SECT         ; CHECK IF THIS IS THE RIGHT SECTOR
+00F0C6  1  C5 84                   CMP     IBSECT
+00F0C8  1  D0 C0        TRYAGAIN:  BNE     TRYADR2      ; NO, TRY ANOTHER SECTOR
+00F0CA  1  A5 87                   LDA     IBCMD        ; READ OR WRITE?
+00F0CC  1  4A                      LSR     A            ; THE CARRY WILL TELL
+00F0CD  1  90 2A                   BCC     WRIT         ; CARRY WAS SET FOR READ OPERATION,
+00F0CF  1  20 48 F1                JSR     READ16       ; CLEARED FOR WRITE
+00F0D2  1  B0 B6                   BCS     TRYADR2      ; CARRY SET UPON RETURN IF BAD READ
+00F0D4  1  AD DF FF                LDA     ENVIRON
+00F0D7  1  29 7F                   AND     #TWOMEG
+00F0D9  1  8D DF FF                STA     ENVIRON      ; SET TWO MEGAHERTZ
+00F0DC  1  20 0F F3                JSR     POSTNIB16    ; DO PARTIAL POSTNIBBLE CONVERSION
+00F0DF  1  A6 81                   LDX     IBSLOT       ; RESTORE SLOTNUM INTO X
+00F0E1  1  B0 A7                   BCS     TRYADR2      ; CHECKSUM ERROR
+00F0E3  1  18           ALLDONE:   CLC
+00F0E4  1  A9 00                   LDA     #00          ; NO ERROR
+00F0E6  1  90 03                   BCC     ALDONE1      ; SKIP OVER NEXT BYTE WITH BIT OPCODE
+00F0E8  1  A9 82        DRVERR:    LDA     #IBDERR      ; BAD DRIVE
+00F0EA  1  38           HNDLERR:   SEC                  ; INDICATE AN ERROR
+00F0EB  1  85 88        ALDONE1:   STA     IBSTAT       ; GIVE HIM ERROR
+00F0ED  1  BD 88 C0                LDA     MOTOROFF,X   ; TURN IT OFF
+00F0F0  1  20 AA F1                JSR     CHKINT       ; BRANCH TO CHECK FOR INTERRUPTS
+00F0F3  1  A5 9F                   LDA     ENVTEMP      ; RESTORE ORIGINAL ENVIRONMENT
+00F0F5  1  8D DF FF                STA     ENVIRON
+00F0F8  1  60                      RTS
+00F0F9  1               
+00F0F9  1  20 16 F2     WRIT:      JSR     WRITE16      ; WRITE NYBBLES NOW
+00F0FC  1  90 E5                   BCC     ALLDONE      ; IF NO ERRORS
+00F0FE  1  A9 81                   LDA     #IBWPER      ; DISK IS WRITE PROTECTED!!
+00F100  1  50 E8                   BVC     HNDLERR      ; TAKEN IF TRUELY WRITE PROTECT ERROR
+00F102  1  D0 C4                   BNE     TRYAGAIN     ; OTHERWISE ASSUME AN INTERRUPT MESSED THINGS UP F104
+00F104  1               ; THIS IS THE 'SEEK' ROUTINE
+00F104  1               ; SEEKS TRACK 'N' IN SLOT #X/$10
+00F104  1               ; IF DRIVENO IS NEGATIVE, ON DRIVE 0
+00F104  1               ; IF DRIVENO IS POSITIVE, ON DRIVE 1 F104
+00F104  1  0A           MYSEEK:    ASL     A            ; ASSUME TWO PHASE STEPPER.
+00F105  1  85 99        SEEK1:     STA     TRKN1        ; SAVE DESTINATION TRACK(*2)
+00F107  1  20 18 F1                JSR     ALLOFF       ; TURN ALL PHASES OFF TO BE SURE.
+00F10A  1  20 3E F1                JSR     DRVINDX      ; GET INDEX TO PREVIOUS TRACK FOR CURRENT DRIVE
+00F10D  1  B5 85                   LDA     DRVOTRK,X
+00F10F  1  85 8C                   STA     CURTRK       ; THIS IS WHERE I AM
+00F111  1  A5 99                   LDA     TRKN1        ; AND WHERE I'M GOING TO
+00F113  1  95 85                   STA     DRVOTRK,X
+00F115  1  20 00 F4     GOSEEK:    JSR     SEEK         ; GO THERE!
+00F118  1  A0 03        ALLOFF:    LDY     #03          ; TURN OFF ALL PHASES BEFORE RETURNING
+00F11A  1  98           NXOFF:     TYA                  ; (SEND PHASE IN ACC.)
+00F11B  1  20 4A F4                JSR     CLRPHASE     ; CARRY IS CLEAR, PHASES SHOULD BE TURNED OFF
+00F11E  1  88                      DEY
+00F11F  1  10 F9                   BPL     NXOFF
+00F121  1  46 8C                   LSR     CURTRK       ; DIVIDE BACK NOW
+00F123  1  18                      CLC
+00F124  1  60                      RTS
+00F125  1               ;
+00F125  1               ; THIS SUBROUTINE SETS THE SLOT DEPENDENT TRACK
+00F125  1               ; LOCATION
+00F125  1               ;
+00F125  1  20 3E F1     SETTRK:    JSR     DRVINDX      ; GET INDEX TO DRIVE NUMBER
+00F128  1  95 85                   STA     DRVOTRK,X
+00F12A  1  60                      RTS
+00F12B  1               ;
+00F12B  1               ;****************************
+00F12B  1               ; SUBR TO TELL IF MOTOR IS STOPPED
+00F12B  1               ;
+00F12B  1               ; IF MOTOR IS STOPPED, CONTROLLER'S
+00F12B  1               ; SHIFT REG WILL NOT BE CHANGING.
+00F12B  1               ;
+00F12B  1               ; RETURN Y=0 AND ZERO FLAG SET IF IT IS STOPPED.
+00F12B  1               ;
+00F12B  1               ;****************************
+00F12B  1               ;
+00F12B  1  A0 00        CHKDRV:    LDY     #00          ; INIT LOOP COUNTER
+00F12D  1  BD 8C C0     CHKDRV1:   LDA     Q6L,X        ; READ THE SHIFT REG
+00F130  1  20 3D F1                JSR     CKDRTS       ; DELAY
+00F133  1  48                      PHA
+00F134  1  68                      PLA
+00F135  1  DD 8C C0                CMP     Q6L,X        ; HAS SHIFT REG CHANGED?
+00F138  1  D0 03                   BNE     CKDRTS       ; YES, MOTOR IS MOVING
+00F13A  1  88                      DEY                  ; NO, DEC RETRY COUNTER
+00F13B  1  D0 F0                   BNE     CHKDRV1      ; AND TRY 256 TIMES
+00F13D  1  60           CKDRTS:    RTS                  ; THEN RETURN F13E
+00F13E  1  48           DRVINDX:   PHA                  ; PRESERVE ACC.
+00F13F  1  8A                      TXA                  ; GET SLOT(*$10)/8
+00F140  1  4A                      LSR     A
+00F141  1  4A                      LSR     A
+00F142  1  4A                      LSR     A
+00F143  1  05 82                   ORA     IBDRVN       ; FOR DRIVE 0 OR 1
+00F145  1  AA                      TAX                  ; INTO X FOR INDEX TO TABLE
+00F146  1  68                      PLA                  ; RESTORE ACC.
+00F147  1  60                      RTS
+00F148  1               ;
+00F148  1               ;*****************************
+00F148  1               ;
+00F148  1               ; NOTE: FORMATTING ROUTINES
+00F148  1               ;       NOT INCLUDED FOR SOS
+00F148  1               ;
+00F148  1               ;*****************************
+00F148  1               ;
+00F148  1               ;*************************
+00F148  1               ;                        *
+00F148  1               ;    READ SUBROUTINE     *
+00F148  1               ;  (16-SECTOR FORMAT)    *
+00F148  1               ;                        *
+00F148  1               ;*************************
+00F148  1               ;                        *
+00F148  1               ;   READS ENCODED BYTES  *
+00F148  1               ;  INTO NBUF1 AND NBUF2  *
+00F148  1               ;                        *
+00F148  1               ;  FIRST READS NBUF2     *
+00F148  1               ;          HIGH TO LOW,  *
+00F148  1               ;  THEN READS NBUF1	     *
+00F148  1               ;          LOW TO HIGH.  *
+00F148  1               ;                        *
+00F148  1               ;   ---- ON ENTRY ----   *
+00F148  1               ;                        *
+00F148  1               ;  X-REG: SLOTNUM        *
+00F148  1               ;         TIMES $10.     *
+00F148  1               ;                        *
+00F148  1               ;  READ MODE (Q6L, Q7L   *
+00F148  1               ;                        *
+00F148  1               ;   ---- ON EXIT ----    *
+00F148  1               ;                        *
+00F148  1               ;  CARRY SET IF ERROR    *
+00F148  1               ;                        *
+00F148  1               ;  IF NO ERROR:          *
+00F148  1               ;     A-REG HOLDS $AA.   *
+00F148  1               ;     X-REG UNCHANGED.   *
+00F148  1               ;     Y-REG HOLDS $00.   *
+00F148  1               ;     CARRY CLEAR.       *
+00F148  1               ;   ---- CAUTION ---     *
+00F148  1               ;                        *
+00F148  1               ;        OBSERVE         *
+00F148  1               ;    'NO PAGE CROSS'     *
+00F148  1               ;      WARNINGS ON       *
+00F148  1               ;    SOME BRANCHES!!     *
+00F148  1               ;                        *
+00F148  1               ;   ---- ASSUMES ----    *
+00F148  1               ;                        *
+00F148  1               ;   1 USEC CYCLE TIME    *
+00F148  1               ;                        *
+00F148  1               ;*************************
+00F148  1               
+00F148  1  A0 20        READ16:    LDY     #$20         ; 'MUST FIND' COUNT.
+00F14A  1  88           RSYNC:     DEY                  ; IF CAN'T FIND MARKS.
+00F14B  1  F0 6A                   BEQ     RDERR        ; THEN EXIT WITH CARRY SET
+00F14D  1  BD 8C C0     RD1:       LDA     Q6L,X        ; READ NIBL.
+00F150  1  10 FB                   BPL     RD1          ; *** NO PAGE CROSS! ***
+00F152  1  49 D5        RSYNC1:    EOR     #$D5         ; DATA MARK1?
+00F154  1  D0 F4                   BNE     RSYNC        ; LOOP IF NOT.
+00F156  1  EA                      NOP                  ; DELAY BETWEEN NIBLS.
+00F157  1  BD 8C C0     RD2:       LDA     Q6L,X
+00F15A  1  10 FB                   BPL     RD2          ; *** NO PAGE CROSS! ***
+00F15C  1  C9 AA                   CMP     #$AA         ; DATA MARK 2?
+00F15E  1  D0 F2                   BNE     RSYNC1       ; (IF NOT, IS IT DM1?)
+00F160  1  A0 55                   LDY     #$55         ; INIT NBUF2 INDEX.
+00F162  1               ;                               ( ADDED NIBL DELAY)
+00F162  1  EA                      NOP                  ; DELAY BETWEEN NIBLS.
+00F163  1  BD 8C C0     RD3:       LDA     Q6L,X
+00F166  1  10 FB                   BPL     RD3          ; *** NO PAGE CROSS! ***
+00F168  1  C9 AD                   CMP     #$AD         ; DATA MARK 3?
+00F16A  1  D0 E6                   BNE     RSYNC1       ; (IF NOT, IS IT DM1?)
+00F16C  1               ;                               (CARRY SET IF DM3!)
+00F16C  1  EA                      NOP                  ; DELAY BETWEEN NIBLS.
+00F16D  1  EA                      NOP                  ; DELAY BETWEEN NIBLS.
+00F16E  1  BD 8C C0     RD4:       LDA     Q6L,X
+00F171  1  10 FB                   BPL     RD4          ; *** NO PAGE CROSS! ***
+00F173  1  99 02 03                STA     NBUF2,Y      ; STORE BYTES DIRECTLY
+00F176  1  AD EF FF                LDA     INTERUPT     ; POLL INTERRUPT LINE
+00F179  1  05 8B                   ORA     IMASK        ; (THIS MAY BE USED TO INVALIDATE POLL)
+00F17B  1  10 37                   BPL     GOSERV
+00F17D  1  88                      DEY                  ; INDEX TO NEXT
+00F17E  1  10 EE                   BPL     RD4
+00F180  1  C8           RD5:       INY                  ; (FIRST TIME Y=0)
+00F181  1  BD 8C C0     RD5A:      LDA     Q6L,X        ; GET ENCODED BYTES OF NBUF1
+00F184  1  10 FB                   BPL     RD5A
+00F186  1  99 00 02                STA     NBUF1,Y
+00F189  1  AD EF FF                LDA     INTERUPT     ; POLL INTERRUPT LINE
+00F18C  1  05 8B                   ORA     IMASK        ; (THIS MAY BE USED TO INVALIDATE POLL)
+00F18E  1  10 24                   BPL     GOSERV
+00F190  1  C0 E4                   CPY     #$E4         ; WITHIN 1 MS OF COMPLETION?
+00F192  1  D0 EC                   BNE     RD5
+00F194  1  C8                      INY
+00F195  1  BD 8C C0     RD6:       LDA     Q6L,X        ; NO POLL FROM NOW ON
+00F198  1  10 FB                   BPL     RD6
+00F19A  1  99 00 02                STA     NBUF1,Y
+00F19D  1  C8                      INY                  ; FINISH OUT NBUF1 PAGE
+00F19E  1  D0 F5                   BNE     RD6
+00F1A0  1  BD 8C C0     RDCKSUM:   LDA     Q6L,X        ; GET CHECKSUM BYTE.
+00F1A3  1  10 FB                   BPL     RDCKSUM
+00F1A5  1  85 96                   STA     CKSUM
+00F1A7  1  20 01 F2                JSR     RDA6         ; CHECK BIT SLIP MARKS
+00F1AA  1               ;
+00F1AA  1               ; CHECK FOR INTERRUPTS
+00F1AA  1               ;
+00F1AA  1  24 8B        CHKINT:    BIT     IMASK        ; SHOULD INTERRUPTS BE ALLOWED?
+00F1AC  1  10 04                   BPL     @10          ; YES, ALLOW THEM.
+00F1AE  1  24 8F                   BIT     $8F
+00F1B0  1  10 01                   BPL     @20
+00F1B2  1  58           @10:       CLI
+00F1B3  1  60           @20:       RTS
+00F1B4  1               
+00F1B4  1  20 AA F2     GOSERV:    JSR     SERVICE      ; GO TO SERVICE INTERRUPT
+00F1B7  1  38           RDERR:     SEC
+00F1B8  1  60                      RTS
+00F1B9  1               
+00F1B9  1               ;***************************
+00F1B9  1               ;			   *
+00F1B9  1               ;     READ ADDRESS FIELD   *
+00F1B9  1               ;         SUBROUTINE	   *
+00F1B9  1               ;    (16-SECTOR FORMAT)	   *
+00F1B9  1               ;			               *
+00F1B9  1               ;***************************
+00F1B9  1               ;			               *
+00F1B9  1               ;    READS VOLUME, TRACK   *
+00F1B9  1               ;        AND SECTOR	       *
+00F1B9  1               ;			               *
+00F1B9  1               ;   ---- ON ENTRY ----	   *
+00F1B9  1               ;                          *
+00F1B9  1               ;  XREG: SLOTNUM TIMES $10 *
+00F1B9  1               ;			               *
+00F1B9  1               ;  READ MODE  (Q6L, Q7L)   *
+00F1B9  1               ;			               *
+00F1B9  1               ;   ---- ON EXIT ----	   *
+00F1B9  1               ;			               *
+00F1B9  1               ;  CARRY SET IF ERROR	   *
+00F1B9  1               ;			               *
+00F1B9  1               ;  IF NO ERROR:		       *
+00F1B9  1               ;    A-REG HOLDS $AA.	   *
+00F1B9  1               ;    Y-REG HOLDS $00.	   *
+00F1B9  1               ;    X-REG UNCHANGED.	   *
+00F1B9  1               ;    CARRY CLEAR.	       *
+00F1B9  1               ;			               *
+00F1B9  1               ;    CSSTV HOLDS CHKSUM,   *
+00F1B9  1               ;      SECTOR, TRACK, AND  *
+00F1B9  1               ;      VOLUME READ.	       *
+00F1B9  1               ;			               *
+00F1B9  1               ;    USES TEMPS COUNT,	   *
+00F1B9  1               ;      LAST, CSUM, AND	   *
+00F1B9  1               ;      4 BYTES AT CSSTV.   *
+00F1B9  1               ;			               *
+00F1B9  1               ;   ---- EXPECTS ----      *
+00F1B9  1               ;			               *
+00F1B9  1               ;   ORIGINAL 10-SECTOR	   *
+00F1B9  1               ;  NORMAL DENSITY NIBLS	   *
+00F1B9  1               ;			               *
+00F1B9  1               ;   (4-BIT), ODD BITS,	   *
+00F1B9  1               ;   THEN EVEN		       *
+00F1B9  1               ;			               *
+00F1B9  1               ;    ---- CAUTION ----     *
+00F1B9  1               ;			               *
+00F1B9  1               ;         OBSERVE	       *
+00F1B9  1               ;     'NO PAGE CROSS'	   *
+00F1B9  1               ;       WARNINGS ON	       *
+00F1B9  1               ;     SOME BRANCHES!!      *
+00F1B9  1               ;                          *
+00F1B9  1               ;    ---- ASSUMES ----     *
+00F1B9  1               ;                          *
+00F1B9  1               ;    1 USEC CYCLE TIME     *
+00F1B9  1               ;                          *
+00F1B9  1               ;***************************
+00F1B9  1               ;
+00F1B9  1  A0 FC        RDADR16:   LDY     #$FC
+00F1BB  1  84 95                   STY     COUNT        ; 'MUST FIND' COUNT.
+00F1BD  1  C8           RDASYN:    INY
+00F1BE  1  D0 04                   BNE     RDA1         ; LOW ORDER OF COUNT
+00F1C0  1  E6 95                   INC     COUNT        ; (2K NIBLS TO FIND
+00F1C2  1  F0 F3                   BEQ     RDERR        ; ADR MARK, ELSE ERR)
+00F1C4  1  BD 8C C0     RDA1:      LDA     Q6L,X        ; READ NIBL.
+00F1C7  1  10 FB                   BPL     RDA1         ; *** NO PAGE CROSS! ***
+00F1C9  1  C9 D5        RDASN1:    CMP     #$D5         ; ADR MARK 1?
+00F1CB  1  D0 F0                   BNE     RDASYN       ; (LOOP IF NOT)
+00F1CD  1  EA                      NOP                  ; ADDED NIBL DELAY
+00F1CE  1  BD 8C C0     RDA2:      LDA     Q6L,X
+00F1D1  1  10 FB                   BPL     RDA2         ; *** NO PAGE CROSS! ***
+00F1D3  1  C9 AA                   CMP     #$AA         ; ADR MARK 2?
+00F1D5  1  D0 F2                   BNE     RDASN1       ; (IF NOT, IS IT AM1?)
+00F1D7  1  A0 03                   LDY     #03          ; INDEX FOR 4-BYTE READ
+00F1D9  1                                               ; (ADDED NIBL DELAY)
+00F1D9  1  BD 8C C0     RDA3:      LDA     Q6L,X
+00F1DC  1  10 FB                   BPL     RDA3         ; *** NO PAGE CROSS! ***
+00F1DE  1  C9 96                   CMP     #$96         ; ADR MARK 3?
+00F1E0  1  D0 E7                   BNE     RDASN1       ; (IF NOT IS IT AM1?)
+00F1E2  1                                               ; (LEAVES CARRY SET!)
+00F1E2  1  78                      SEI                  ; DISABLE INTERRUPT SYSTEM
+00F1E3  1  A9 00                   LDA     #00          ; INIT CHECKSUM
+00F1E5  1  85 89        RDAFLD:    STA     CSUM
+00F1E7  1  BD 8C C0     RDA4:      LDA     Q6L,X        ; READ 'ODD BIT' NIBBL
+00F1EA  1  10 FB                   BPL     RDA4         ; *** NO PAGE CROSS! ***
+00F1EC  1  2A                      ROL     A            ; ALIGN ODD BITS, 1' INTO LSB
+00F1ED  1  85 95                   STA     LAST         ; (SAVE THEM)
+00F1EF  1  BD 8C C0     RDAS:      LDA     Q6L,X        ; READ 'EVEN BIT' NIBL
+00F1F2  1  10 FB                   BPL     RDAS         ; *** NO PAGE CROSS ***
+00F1F4  1  25 95                   AND     LAST         ; MERGE ODD AND EVEN BITS
+00F1F6  1  99 97 00                STA     CSSTV,Y      ; STORE DATA BYTE
+00F1F9  1  45 89                   EOR     CSUM
+00F1FB  1  88                      DEY
+00F1FC  1  10 E7                   BPL     RDAFLD       ; LOOP ON 4 DATA BYTES.
+00F1FE  1  A8                      TAY                  ; IF FINAL CHECKSUM
+00F1FF  1  D0 B6                   BNE     RDERR        ; NONZERO, THEN ERROR
+00F201  1  BD 8C C0     RDA6:      LDA     Q6L,X        ; FIRST BIT SLIP NIBBL
+00F204  1  10 FB                   BPL     RDA6         ; *** NO PAGE CROSS! ***
+00F206  1  C9 DE                   CMP     #$DE
+00F208  1  D0 AD                   BNE     RDERR        ; ERROR IF NONMATCH
+00F20A  1  EA                      NOP                  ; DELAY
+00F20B  1  BD 8C C0     RDA7:      LDA     Q6L,X        ; SECOND BIT-SLIP NIBL
+00F20E  1  10 FB                   BPL     RDA7         ; *** NO PAGE CROSS! ***
+00F210  1  C9 AA                   CMP     #$AA
+00F212  1  D0 A3                   BNE     RDERR        ; ERROR IF NOMATCH
+00F214  1  18           RDEXIT:    CLC                  ; CLEAR CARRY ON
+00F215  1  60           WEXIT:     RTS                  ; NORMAL READ EXITS.
+00F216  1               
+00F216  1               ;***********************
+00F216  1               ;                      *
+00F216  1               ;    WRITE SUBR        *
+00F216  1               ;  (16-SECTOR FORMAT)  *
+00F216  1               ;                      *
+00F216  1               ;***********************
+00F216  1               ;                      *
+00F216  1               ;   WRITES DATA FROM   *
+00F216  1               ;    NBUF1 AND NBUF2   * .
+00F216  1               ;                      *
+00F216  1               ;  FIRST NBUF2,        *
+00F216  1               ;      HIGH TO LOW.    *
+00F216  1               ;  THEN NBUF1,         *
+00F216  1               ;      LOW TO HIGH     *
+00F216  1               ;                      *
+00F216  1               ;  ---- ON ENTRY ----  *
+00F216  1               ;                      *
+00F216  1               ;   X-REG    SLOTNUM   *
+00F216  1               ;        TIMES $10     *
+00F216  1               ;                      *
+00F216  1               ;                      *
+00F216  1               ;  ---- ON EXIT ----   *
+00F216  1               ;                      *
+00F216  1               ;  CARRY SET IF ERROR. *
+00F216  1               ;   (W PROT VIOLATION) *
+00F216  1               ;                      *
+00F216  1               ;  IF NO ERROR:        *
+00F216  1               ;                      *
+00F216  1               ;    A-REG UNCERTAIN.  *
+00F216  1               ;    X-REG UNCHANGED.  *
+00F216  1               ;    Y-REG HOLDS $00.  *
+00F216  1               ;    CARRY CLEAR.      *
+00F216  1               ;		               *
+00F216  1               ;  ---- ASSUMES ----   *
+00F216  1               ;		               *
+00F216  1               ;  1 USEC CYCLE TIME   *
+00F216  1               ;                      *
+00F216  1               ;***********************
+00F216  1               ;
+00F216  1  38           WRITE16:   SEC                  ; ANTICIPATE WPROT ERR.
+00F217  1  B8                      CLV                  ; TO INDICATE WRITE PROTECT ERROR INSTEAD OF
+00F218  1                                               ; INTERRUPT
+00F218  1  BD 8D C0                LDA     Q6H,X
+00F21B  1  BD 8E C0                LDA     Q7L,X        ; SENSE WPROT FLAG.
+00F21E  1  30 F5                   BMI     WEXIT        ; BRANCH IF WRITE PROTECTED
+00F220  1  A9 FF        WRIT1:     LDA     #$FF         ; SYNC DATA.
+00F222  1  9D 8F C0                STA     Q7H,X        ; (5) GOTO WRITE MODE
+00F225  1  1D 8C C0                ORA     Q6L,X        ; (4)
+00F228  1  A0 04                   LDY     #04          ; (2) FOR FIVE NIBLS.
+00F22A  1  EA                      NOP                  ; (2)
+00F22B  1  48                      PHA                  ; (4)
+00F22C  1  68                      PLA                  ; (3)
+00F22D  1  48           WSYNC:     PHA                  ; (4) EXACT TIMING
+00F22E  1  68                      PLA                  ; (3)
+00F22F  1  20 BB F2                JSR     WNIBL7       ; (13,9,6) WRITE SYNC
+00F232  1  88                      DEY                  ; (2)
+00F233  1  D0 F8                   BNE     WSYNC        ; (2*) MUST NOT CROSS PAGE!
+00F235  1  A9 D5                   LDA     #$D5         ; (2)  1ST DATA MARK
+00F237  1  20 BA F2                JSR     WNIBL9       ; (15,9,6)
+00F23A  1  A9 AA                   LDA     #$AA         ; (2)  2ND DATA MARK
+00F23C  1  20 BA F2                JSR     WNIBL9       ; (15,9,6)
+00F23F  1  A9 AD                   LDA     #$AD         ; (2)  3RD DATA MARK
+00F241  1  20 BA F2                JSR     WNIBL9       ; (15,9,6)
+00F244  1  A0 55                   LDY     #$55         ; (2) NBUF2 INDEX
+00F246  1  EA                      NOP                  ; (2) FOR TIMING
+00F247  1  EA                      NOP                  ; (2)
+00F248  1  EA                      NOP                  ; (2)
+00F249  1  D0 08                   BNE     VRYFRST      ; (3) BRANCH ALWAYS
+00F24B  1  AD EF FF     WINTRPT:   LDA     INTERUPT     ; (4) POLL INTERRUPT LINE
+00F24E  1  05 8B                   ORA     IMASK        ; (3)
+00F250  1  38                      SEC                  ; (2)
+00F251  1  10 57                   BPL     SERVICE      ; (2) BRANCH IF INTERRUPT HAS OCCURED
+00F253  1  30 00        VRYFRST:   BMI     WRTFRST      ; (3) FOR TIMING.
+00F255  1  B9 02 03     WRTFRST:   LDA     NBUF2,Y      ; (4)
+00F258  1  9D 8D C0                STA     Q6H,X        ; (5) STORE ENCODED BYTE
+00F25B  1  BD 8C C0                LDA     Q6L,X        ; (4) TIME MUST = 32 US PER BYTE!
+00F25E  1  88                      DEY                  ; (2)
+00F25F  1  10 EA                   BPL     WINTRPT      ; (3) (2 IF BRANCH NOT TAKEN)
+00F261  1  98                      TYA                  ; (2) INSURE NO INTERRUPT THIS BYTE
+00F262  1  30 03                   BMI     WMIDLE       ; (3) BRANCH ALWAYS.
+00F264  1  AD EF FF     WNTRPT1:   LDA     INTERUPT     ; (4) POLL INTERRUPT LINE
+00F267  1  05 8B        WMIDLE:    ORA     IMASK        ; (3)
+00F269  1  38                      SEC                  ; (2)
+00F26A  1  30 02                   BMI     WDATA2       ; (3) BRANCH IF NO INTERRUPT
+00F26C  1  10 3C                   BPL     SERVICE      ; GO SERVICE INTERRUPT.
+00F26E  1  C8           WDATA2:    INY                  ; (2)
+00F26F  1  B9 00 02                LDA     NBUF1,Y      ; (4)
+00F272  1  9D 8D C0                STA     Q6H,X        ; (5) STORE ENCODED BYTE
+00F275  1  BD 8C C0                LDA     Q6L,X        ; (4)
+00F278  1  C0 E4                   CPY     #$E4         ; (2) WITHIN 1 MS OF COMPLETION?
+00F27A  1  D0 E8                   BNE     WNTRPT1      ; (3)    (2) NO KEEP WRITTING AND POLLING.
+00F27C  1  EA                      NOP                  ; (2)
+00F27D  1  C8                      INY                  ; (2)
+00F27E  1  EA           WDATA3:    NOP                  ; (2)
+00F27F  1  EA                      NOP                  ; (2)
+00F280  1  48                      PHA                  ; (4)
+00F281  1  68                      PLA                  ; (3)
+00F282  1  B9 00 02                LDA     NBUF1,Y      ; (4) WRITE LAST OF ENCODED BYTES
+00F285  1  9D 8D C0                STA     Q6H,X        ; (5) WITHOUT POLLING INTERRUPTS.
+00F288  1  BD 8C C0                LDA     Q6L,X        ; (4)
+00F28B  1  A5 96                   LDA     CKSUM        ; (3) NORMALLY FOR TIMING
+00F28D  1  C8                      INY                  ; (2)
+00F28E  1  D0 EE                   BNE     WDATA3       ; (3)    (2)
+00F290  1  F0 00                   BEQ     WRCKSUM      ; (3) BRANCH ALWAYS
+00F292  1  20 BB F2     WRCKSUM:   JSR     WNIBL7       ; (13,9,6)    GO WRITE CHECK SUM!!
+00F295  1  48                      PHA                  ; (3)
+00F296  1  68                      PLA                  ; (4)
+00F297  1  B9 C0 F3     WRBITSLMK: LDA     BITSLIPMK,Y  ; (4) LOAD BIT SLIP MARK
+00F29A  1  20 BD F2                JSR     WNIBL        ; (6,9,6)
+00F29D  1  C8                      INY                  ; (2)
+00F29E  1  C0 04                   CPY     #04          ; (2)
+00F2A0  1  D0 F5                   BNE     WRBITSLMK    ; (2)    (3)
+00F2A2  1  18                      CLC                  ; (2)
+00F2A3  1  BD 8E C0     NOWRITE:   LDA     Q7L,X        ; OUT OF WRITE MODE.
+00F2A6  1  BD 8C C0                LDA     Q6L,X        ; TO READ MODE.
+00F2A9  1  60                      RTS                  ; RETURN FROM WRITE.
+00F2AA  1               
+00F2AA  1  2C 54 F3     SERVICE:   BIT     SEV          ; SET VFLAG TO INDICATE INTERRUPT
+00F2AD  1  20 A3 F2                JSR     NOWRITE      ; TAKE IT OUT OF WRITE MODE!
+00F2B0  1  A5 8F                   LDA     $8F
+00F2B2  1  10 02                   BPL     TEN
+00F2B4  1  85 8B                   STA     IMASK
+00F2B6  1  C6 8F        TEN:       DEC     $8F
+00F2B8  1  58                      CLI                  ; COULD NOT HAVE GOT HERE WITHOUT CLI OK
+00F2B9  1  60                      RTS
+00F2BA  1               ;
+00F2BA  1               ;****************************
+00F2BA  1               ;                           *
+00F2BA  1               ;   7-BIT NIBL WRITE SUBRS  *
+00F2BA  1               ;                           *
+00F2BA  1               ;   A-REG OR'D PRIOR EXIT   *
+00F2BA  1               ;       CARRY CLEARED	    *
+00F2BA  1               ;                           *
+00F2BA  1               ;****************************
+00F2BA  1               ;
+00F2BA  1  18           WNIBL9:    CLC                  ; (2) 9 CYCLES, THEN WRITE
+00F2BB  1  48           WNIBL7:    PHA                  ; (3) 7 CYCLES, THEN WRITE
+00F2BC  1  68                      PLA                  ; (4)
+00F2BD  1  9D 8D C0     WNIBL:     STA     Q6H,X        ; (5) NIBL WRITE SUB
+00F2C0  1  1D 8C C0                ORA     Q6L,X        ; (4) CLOBBERS ACC. NOT CARRY
+00F2C3  1  60                      RTS
+00F2C4  1               ;
+00F2C4  1               ;****************************
+00F2C4  1               ;                           *
+00F2C4  1               ;    PRENIBILIZE SUBR       *
+00F2C4  1               ;   (16-SECTOR FORMAT)      *
+00F2C4  1               ;                           *
+00F2C4  1               ;****************************
+00F2C4  1               ;                           *
+00F2C4  1               ;  CONVERTS 256 BYTES OF    *
+00F2C4  1               ;  USER DATA IN (BUF) INTO  *
+00F2C4  1               ;  ENCODED BYTES TO BE      *
+00F2C4  1               ;  WRITTEN DIRECTLY TO DISK *
+00F2C4  1               ;  ENCODED CHECK SUM IN     *
+00F2C4  1               ;  ZERO PAGE 'CKSUM'        *
+00F2C4  1               ;                           *
+00F2C4  1               ;   ---- ON ENTRY ----      *
+00F2C4  1               ;                           *
+00F2C4  1               ;  BUF IS 2-BYTE POINTER    *
+00F2C4  1               ;    TO 256 BYTES OF USER   *
+00F2C4  1               ;    DATA.                  *
+00F2C4  1               ;                           *
+00F2C4  1               ;  A-REG CHECK SUM.         *
+00F2C4  1               ;  X-REG UNCERTAIN          *
+00F2C4  1               ;  Y-REG HOLDS 0.           *
+00F2C4  1               ;  CARRY SET.               *
+00F2C4  1               ;                           *
+00F2C4  1               ;****************************
+00F2C4  1               ;
+00F2C4  1  A2 02        PRENIB16:  LDX     #02          ; START NBUF2 INDEX.
+00F2C6  1  A0 00                   LDY     #00          ; START USER BUF INDEX.
+00F2C8  1  88           PRENIB1:   DEY                  ; NEXT USER BYTE
+00F2C9  1  B1 9B                   LDA     (BUF),Y
+00F2CB  1  4A                      LSR     A            ; SHIFT TWO BITS OF
+00F2CC  1  3E 01 03                ROL     NBUF2-1,X    ; CURRENT USER BYTE
+00F2CF  1  4A                      LSR     A            ; INTO CURRENT NBUF2
+00F2D0  1  3E 01 03                ROL     NBUF2-1,X    ; BYTE.
+00F2D3  1  99 01 02                STA     NBUF1+1,Y    ; (6 BITS LEFT).
+00F2D6  1  E8                      INX                  ; FROM 0 TO $55
+00F2D7  1  E0 56                   CPX     #$56
+00F2D9  1  90 ED                   BCC     PRENIB1      ; BR IF NO WRAPAROUND
+00F2DB  1  A2 00                   LDX     #00          ; RESET NBUF2 INDEX
+00F2DD  1  98                      TYA                  ; USER BUF INDEX
+00F2DE  1  D0 E8                   BNE     PRENIB1      ; (DONE IF ZERO)
+00F2E0  1  A0 56                   LDY     #$56         ; (ACC=0 FOR CHECK SUM)
+00F2E2  1  59 00 03     PRENIB3:   EOR     NBUF2-2,Y    ; COMBINE WITH PREVIOUS
+00F2E5  1  29 3F        PRENIB2:   AND     #$3F         ; STRIP GARBAGE BITS
+00F2E7  1  AA                      TAX                  ; TO FORM RUNNING CHECK SUM
+00F2E8  1  BD 55 F3                LDA     NIBL,X       ; GET ENCODED EQUIV.
+00F2EB  1  99 01 03                STA     NBUF2-1,Y    ; REPLACE PREVIOUS
+00F2EE  1  B9 00 03                LDA     NBUF2-2,Y    ; RESTORE ACTUAL PREVIOUS
+00F2F1  1  88                      DEY
+00F2F2  1  D0 EE                   BNE     PRENIB3      ; LOOP UNTIL ALL OF NBUF2 IS CONVERTED.
+00F2F4  1  29 3F                   AND     #$3F
+00F2F6  1  59 01 02     PRENIB4:   EOR     NBUF1+1,Y    ; NOW DO THE SAME FOR
+00F2F9  1  AA                      TAX                  ; NIBBLE BUFFER 1
+00F2FA  1  BD 55 F3                LDA     NIBL,X       ; TO DO ANY BACK TRACKING (NBUF1-1)
+00F2FD  1  99 00 02                STA     NBUF1,Y
+00F300  1  B9 01 02                LDA     NBUF1+1,Y    ; RECOVER THAT WHICH IS NOW 'PREVIOUS'
+00F303  1  C8                      INY
+00F304  1  D0 F0                   BNE     PRENIB4
+00F306  1  AA                      TAX                  ; USE LAST AS CHECK SUM
+00F307  1  BD 55 F3                LDA     NIBL,X
+00F30A  1  85 96                   STA     CKSUM
+00F30C  1  4C 4C F3                JMP     SET1MEG      ; ALL DONE.
+00F30F  1               ;
+00F30F  1               ;**************************
+00F30F  1               ;                         *
+00F30F  1               ;    POSTNIBLIZE SUBR     *
+00F30F  1               ;    16-SECTOR FORMAT     *
+00F30F  1               ;                         *
+00F30F  1               ;**************************
+00F30F  1               ;
+00F30F  1  38           POSTNIB16: SEC
+00F310  1  A0 55                   LDY     #$55         ; FIRST CONVERT TO 6 BIT NIBBLES
+00F312  1  A9 00                   LDA     #00          ; INIT CHECK SUM
+00F314  1  BE 02 03     PNIBL1:    LDX     NBUF2,Y      ; GET ENCODED BYTE
+00F317  1  5D 00 F3                EOR     DNIBL,X
+00F31A  1  30 30                   BMI     SET1MEG      ; SET 1 MHZ
+00F31C  1  99 02 03                STA     NBUF2,Y      ; REPLACE WITH 6 BIT EQUIV.
+00F31F  1  88                      DEY
+00F320  1  10 F2                   BPL     PNIBL1       ; LOOP UNTIL DONE WITH NIBBLE BUFFER 2
+00F322  1  C8                      INY                  ; NOW Y=0
+00F323  1  BE 00 02     PNIBL2:    LDX     NBUF1,Y      ; DO THE SAME WITH
+00F326  1  5D 00 F3                EOR     DNIBL,X
+00F329  1  99 00 02                STA     NBUF1,Y      ; NIBBLE BUFFER 1
+00F32C  1  C8                      INY                  ; DO ALL 256 BYTES
+00F32D  1  D0 F4                   BNE     PNIBL2
+00F32F  1  A6 96                   LDX     CKSUM        ; MAKE SURE CHECK SUM MATCHES
+00F331  1  5D 00 F3                EOR     DNIBL,X      ; BETTER BE ZERO
+00F334  1  D0 16                   BNE     POSTERR      ; BRANCH IF IT IS
+00F336  1  A2 56        POST1:     LDX     #$56         ; INIT NBUF2 INDEX
+00F338  1  CA           POST2:     DEX                  ; NBUF IDX $55 TO $00
+00F339  1  30 FB                   BMI     POST1        ; WRAPAROUND IF NEG
+00F33B  1  B9 00 02                LDA     NBUF1,Y
+00F33E  1  5E 02 03                LSR     NBUF2,X      ; SHIFT 2 BITS FROM
+00F341  1  2A                      ROL     A            ; CURRENT NBUF2 NIBL
+00F342  1  5E 02 03                LSR     NBUF2,X      ; CURRENT NBUF1
+00F345  1  2A                      ROL     A            ; NIBL.
+00F346  1  91 9B                   STA     (BUF),Y      ; BYTE OF USER DATA
+00F348  1  C8                      INY                  ; NEXT USER BYTE
+00F349  1  D0 ED                   BNE     POST2
+00F34B  1  18                      CLC                  ; GOOD DATA
+00F34C  1               POSTERR    =       *
+00F34C  1  AD DF FF     SET1MEG:   LDA     ENVIRON
+00F34F  1  09 80                   ORA     #ONEMEG      ; SET TO ONE MEGAHERTZ CLOCK RATE
+00F351  1  8D DF FF                STA     ENVIRON
+00F354  1  60           SEV:       RTS                  ; (SEV USED TO SET VFLAG)
+00F355  1               ;
+00F355  1               ;**************************
+00F355  1               ;                         *
+00F355  1               ;     6-BIT TO 7-BIT      *
+00F355  1               ;  NIBL CONVERSION TABLE  *
+00F355  1               ;                         *
+00F355  1               ;**************************
+00F355  1               ;                         *
+00F355  1               ;   CODES WITH MORE THAN  *
+00F355  1               ;   ONE PAIR OF ADJACENT  *
+00F355  1               ;    ZEROES OR WITH NO    *
+00F355  1               ;   ADJACENT ONES (EXCEPT *
+00F355  1               ;     B7) ARE EXCLUDED.   *
+00F355  1               ;                         *
+00F355  1               ;**************************
+00F355  1               ;
+00F355  1  96 97 9A 9B  NIBL:      .BYTE   $96,$97,$9A,$9B,$9D,$9E,$9F,$A6,$A7,$AB,$AC,$AD,$AE,$AF,$B2,$B3,$B4,$B5
+00F359  1  9D 9E 9F A6  
+00F35D  1  A7 AB AC AD  
+00F367  1  B6 B7 B9 BA             .BYTE   $B6,$B7,$B9,$BA,$BB,$BC,$BD,$BE,$BF,$CB,$CD,$CE,$CF,$D3,$D6,$D7
+00F36B  1  BB BC BD BE  
+00F36F  1  BF CB CD CE  
+00F377  1  D9 DA DB DC             .BYTE   $D9,$DA,$DB,$DC,$DD,$DE,$DF,$E5,$E6,$E7,$E9,$EA,$EB,$EC,$ED,$EE
+00F37B  1  DD DE DF E5  
+00F37F  1  E6 E7 E9 EA  
+00F387  1  EF F2 F3 F4             .BYTE   $EF,$F2,$F3,$F4,$F5,$F6,$F7,$F9,$FA,$FB,$FC,$FD,$FE,$FF
+00F38B  1  F5 F6 F7 F9  
+00F38F  1  FA FB FC FD  
+00F395  1               
+00F395  1               
+00F395  1               ;***************************
+00F395  1               ;                          *
+00F395  1               ;     7-BIT TO 6-BIT       *
+00F395  1               ;    'DENIBLIZE' TABL      *
+00F395  1               ;    (16-SECTOR FORMAT)    *
+00F395  1               ;                          *
+00F395  1               ;       VALID CODES        *
+00F395  1               ;      $96 TO $FF ONLY.    *
+00F395  1               ;                          *
+00F395  1               ;                          *
+00F395  1               ;    CODES WITH MORE THAN  *
+00F395  1               ;    ONE PAIR OF ADJACENT  *
+00F395  1               ;     ZEROES OR WITH NO    *
+00F395  1               ;    ADJACENT ONES (EXCEPT *
+00F395  1               ;    BIT 7) ARE EXCLUDED   *
+00F395  1               ;***************************
+00F395  1               ;
+00F395  1               DNIBL       =      REGRWTS + $300
+00F395  1  01 00 01                .BYTE   $01,$00,$01
+00F398  1  98 99 02 03             .BYTE   $98,$99,$02,$03,$9C,$04,$05,$06,$A0,$A1,$A2,$A3,$A4,$A5,$07,$08,$A8
+00F39C  1  9C 04 05 06  
+00F3A0  1  A0 A1 A2 A3  
+00F3A9  1  A9 AA 09 0A             .BYTE   $A9,$AA,$09,$0A,$0B,$0C,$0D,$B0,$B1,$0E,$0F,$10,$11,$12,$13,$B8,$14,$15
+00F3AD  1  0B 0C 0D B0  
+00F3B1  1  B1 0E 0F 10  
+00F3BB  1  16 17 18 19             .BYTE   $16,$17,$18,$19,$1A
+00F3BF  1  1A           
+00F3C0  1               
+00F3C0  1  DE AA EB FF  BITSLIPMK: .BYTE   $DE,$AA,$EB,$FF,$C4,$C5,$C6,$C7,$C8,$C9,$CA,$1B,$CC,$1C,$1D,$1E
+00F3C4  1  C4 C5 C6 C7  
+00F3C8  1  C8 C9 CA 1B  
+00F3D0  1  D0 D1 D2 1F             .BYTE   $D0,$D1,$D2,$1F,$D4,$D5,$20,$21,$D8,$22,$23,$24,$25,$26,$27,$28,$E0,$E1
+00F3D4  1  D4 D5 20 21  
+00F3D8  1  D8 22 23 24  
+00F3E2  1  E2 E3 E4 29             .BYTE   $E2,$E3,$E4,$29,$2A,$2B,$E8,$2C,$2D,$2E,$2F,$30,$31,$32,$F0,$F1,$33,$34
+00F3E6  1  2A 2B E8 2C  
+00F3EA  1  2D 2E 2F 30  
+00F3F4  1  35 36 37 38             .BYTE   $35,$36,$37,$38,$F8,$39,$3A,$3B,$3C,$3D,$3E,$3F
+00F3F8  1  F8 39 3A 3B  
+00F3FC  1  3C 3D 3E 3F  
+00F400  1               
+00F400  1               
+00F400  1               
+00F400  1               
+00F400  1               ;*************************
+00F400  1               ;                        *
+00F400  1               ;  FAST SEEK SUBROUTINE  *
+00F400  1               ;                        *
+00F400  1               ;*************************
+00F400  1               ;                        *
+00F400  1               ;   ---- ON ENTRY ----   *
+00F400  1               ;                        *
+00F400  1               ;  X-REG HOLDS SLOTNUM   *
+00F400  1               ;         TIMES $10      *
+00F400  1               ;                        *
+00F400  1               ;  A-REG HOLDS DESIRED   *
+00F400  1               ;         HALFTRACK.     *
+00F400  1               ;                        *
+00F400  1               ;  CURTRK HOLDS DESIRED  *
+00F400  1               ;          HALFTRACK.    *
+00F400  1               ;                        *
+00F400  1               ;    ---- ON EXIT ----   *
+00F400  1               ;                        *
+00F400  1               ;  A-REG UNCERTAIN.      *
+00F400  1               ;  Y-REG UNCERTAIN.      *
+00F400  1               ;  X-REG UNDISTURBED.    *
+00F400  1               ;                        *
+00F400  1               ;  CURTRK AND TRKN HOLD  *
+00F400  1               ;      FINAL HALFTRACK.  *
+00F400  1               ;                        *
+00F400  1               ;  PRIOR HOLDS PRIOR     *
+00F400  1               ;    HALFTRACK IF SEEK   *
+00F400  1               ;    WAS REQUIRED.       *
+00F400  1               ;                        *
+00F400  1               ;  MONTIMEL AND MONTIMEH *
+00F400  1               ;    ARE INCREMENTED BY  *
+00F400  1               ;    THE NUMBER OF       *
+00F400  1               ;    100 USEC QUANTUMS   *
+00F400  1               ;    REQUIRED BY SEEK    *
+00F400  1               ;    FOR MOTOR ON TIME   *
+00F400  1               ;    OVERLAP.            *
+00F400  1               ;                        *
+00F400  1               ; --- VARIABLES USED --- *
+00F400  1               ;                        *
+00F400  1               ;  CURTRK, TRKN, COUNT,  *
+00F400  1               ;    PRIOR, SLOTTEMP     *
+00F400  1               ;    MONTIMEL, MONTIMEH  *
+00F400  1               ;                        *
+00F400  1               ;*************************
+00F400  1               ;
+00F400  1  85 9E        SEEK:      STA     TRKN         ; SAVE TARGET TRACK
+00F402  1  C5 8C                   CMP     CURTRK       ; ON DESIRED TRACK?
+00F404  1  F0 42                   BEQ     SETPHASE     ; YES, ENERGIZE PHASE AND RETURN
+00F406  1  A9 00                   LDA     #00
+00F408  1  85 95                   STA     TRKCNT       ; HALFTRACK COUNT.
+00F40A  1  A5 8C        SEEK2:     LDA     CURTRK       ; SAVE CURTRK FOR
+00F40C  1  85 9D                   STA     PRIOR        ; DELAYED TURN OFF. SEC
+00F40E  1  38                      SEC
+00F40F  1  E5 9E                   SBC     TRKN         ; DELTA-TRACKS.
+00F411  1  F0 31                   BEQ     SEEKEND      ; BR IF CURTRK=DESTINATION
+00F413  1  B0 06                   BCS     OUT          ; (MOVE OUT, NOT IN)
+00F415  1  49 FF                   EOR     #$FF         ; CALC TRKS TO GO.
+00F417  1  E6 8C                   INC     CURTRK       ; DECR CURRENT TRACK (OUT)
+00F419  1  90 04                   BCC     MINTST       ; (ALWAYS TAKEN).
+00F41B  1  69 FE        OUT:       ADC     #$FE         ; CALC TRACKS TO GO.
+00F41D  1  C6 8C                   DEC     CURTRK       ; DECR CURRENT TRACK (OUT)
+00F41F  1  C5 95        MINTST:    CMP     TRKCNT
+00F421  1  90 02                   BCC     MAXTST       ; AND 'TRKS MOVED'
+00F423  1  A5 95                   LDA     TRKCNT
+00F425  1  C9 09        MAXTST:    CMP     #09
+00F427  1  B0 02                   BCS     STEP2        ; IF TRKCNT>$08 LEAVE Y ALONE (Y=$08)
+00F429  1  A8           STEP:      TAY                  ; ELSE SET ACCELERATION INDEX IN Y SEC
+00F42A  1  38                      SEC
+00F42B  1  20 48 F4     STEP2:     JSR     SETPHASE
+00F42E  1  B9 67 F4                LDA     ONTABLE,Y    ; FOR 'ONTIME'
+00F431  1  20 56 F4                JSR     MSWAIT       ; (100 USEC INTERVALS)
+00F434  1  A5 9D                   LDA     PRIOR
+00F436  1  18                      CLC                  ; FOR PHASE OFF
+00F437  1  20 4A F4                JSR     CLRPHASE     ; TURN OFF PRIOR PHASE
+00F43A  1  B9 70 F4                LDA     OFFTABLE,Y   ; THEN WAIT 'OFFTIME'
+00F43D  1  20 56 F4                JSR     MSWAIT       ; (100 USEC INTERVALS)
+00F440  1  E6 95                   INC     TRKCNT       ; 'TRACKS MOVED' COUNT.
+00F442  1  D0 C6                   BNE     SEEK2        ; (ALWAYS TAKEN)
+00F444  1  20 56 F4     SEEKEND:   JSR     MSWAIT       ; SETTLE 25 MSEC
+00F447  1  18                      CLC                  ; SET FOR PHASE OFF
+00F448  1  A5 8C        SETPHASE:  LDA     CURTRK       ; GET CURRENT TRACK
+00F44A  1  29 03        CLRPHASE:  AND     #03          ; MASK FOR 1 AND 4 PHASES
+00F44C  1  2A                      ROL     A            ; DOUBLE FOR PHASE ON/OFF INDEX
+00F44D  1  05 81                   ORA     IBSLOT
+00F44F  1  AA                      TAX
+00F450  1  BD 80 C0                LDA     PHASEOFF,X   ; TURN ON/OFF ONE PHASE IBSLOT
+00F453  1  A6 81                   LDX     IBSLOT       ; RESTORE X-REG
+00F455  1  60           SEEKRTS:   RTS                  ; AND RETURN
+00F456  1               ;
+00F456  1               ;***************************
+00F456  1               ;                          *
+00F456  1               ;    MSWAIT SUBROUTINE     *
+00F456  1               ;***************************
+00F456  1               ;                          *
+00F456  1               ;   DELAYS A SPECIFIED     *
+00F456  1               ;    NUMBER OF 100 USEC    *
+00F456  1               ;    INTERVALS FOR MOTOR   *
+00F456  1               ;    ON TIMING             *
+00F456  1               ;                          *
+00F456  1               ;    ---- ON EXIT ----     *
+00F456  1               ;                          *
+00F456  1               ;   A-REG HOLDS $00        *
+00F456  1               ;   X-REG HOLDS $00        *
+00F456  1               ;   Y-REG UNCHANGED        *
+00F456  1               ;   CARRY SET              *
+00F456  1               ;                          *
+00F456  1               ;   MONTIMEL, MONTIMEH     *
+00F456  1               ;    ARE INCREMENTED ONCE  *
+00F456  1               ;    PER 100 USEC INTERVAL *
+00F456  1               ;    FOR MOTOR ON TIMING   *
+00F456  1               ;                          *
+00F456  1               ;     ---- ASSUMES ----    *
+00F456  1               ;                          *
+00F456  1               ;    1 USEC CYCLE TIME     *
+00F456  1               ;                          *
+00F456  1               ;***************************
+00F456  1               ;
+00F456  1  A2 11        MSWAIT:    LDX     #$11
+00F458  1  CA           MSW1:      DEX                  ; DELAY 86 USEC
+00F459  1  D0 FD                   BNE     MSW1
+00F45B  1  E6 99                   INC     MONTIMEL
+00F45D  1  D0 02                   BNE     MSW2         ; DOUBLE BYTE INCREMENT
+00F45F  1  E6 9A                   INC     MONTIMEH
+00F461  1  38           MSW2:      SEC
+00F462  1  E9 01                   SBC     #01          ; DONE IN INTERVALS
+00F464  1  D0 F0                   BNE     MSWAIT       ; (A-REG COUNTS)
+00F466  1  60                      RTS
+00F467  1               ;
+00F467  1               ;*************************
+00F467  1               ;                        *
+00F467  1               ;  PHASE ON-, OFF-TIME   *
+00F467  1               ;   TABLES IN 100-USEC   *
+00F467  1               ;   INTERVALS. (SEEK)    *
+00F467  1               ;                        *
+00F467  1               ;*************************
+00F467  1               ;
+00F467  1  01 30 28 24  ONTABLE:   .BYTE   $01,$30,$28,$24,$20,$1E,$1D,$1C,$1C
+00F46B  1  20 1E 1D 1C  
+00F46F  1  1C           
+00F470  1  70 2C 26 22  OFFTABLE:  .BYTE   $70,$2C,$26,$22,$1F,$1E,$1D,$1C,$1C
+00F474  1  1F 1E 1D 1C  
+00F478  1  1C           
+00F479  1               
+00F479  1  86 83        BLOCKIO:   STX     IBTRK
+00F47B  1  A0 05                   LDY     #05
+00F47D  1  48                      PHA
+00F47E  1  0A           TRKSEC:    ASL     A
+00F47F  1  26 83                   ROL     IBTRK
+00F481  1  88                      DEY
+00F482  1  D0 FA        DOFA:      BNE     TRKSEC
+00F484  1  68                      PLA
+00F485  1  29 07                   AND     #07
+00F487  1  A8                      TAY
+00F488  1  B9 A0 F4                LDA     SECTABL,Y
+00F48B  1  85 84                   STA     IBSECT
+00F48D  1  20 00 F0                JSR     REGRWTS
+00F490  1  B0 0B                   BCS     QUIT
+00F492  1  E6 86                   INC     IBBUFP+1
+00F494  1  E6 84                   INC     IBSECT
+00F496  1  E6 84                   INC     IBSECT
+00F498  1  20 00 F0                JSR     REGRWTS
+00F49B  1  C6 86                   DEC     IBBUFP+1
+00F49D  1  A5 88        QUIT:      LDA     IBSTAT
+00F49F  1  60                      RTS
+00F4A0  1               ;
+00F4A0  1  00 04 08 0C  SECTABL:   .BYTE   $00,$04,$08,$0C,$01,$05,$09,$0D
+00F4A4  1  01 05 09 0D  
+00F4A8  1               ;*******************************
+00F4A8  1               ;                              *
+00F4A8  1               ;    JOYSTICK READ ROUTINE     *
+00F4A8  1               ;                              *
+00F4A8  1               ;*******************************
+00F4A8  1               ;  ENTRY  ACC= COUNT DOWN HIGH *
+00F4A8  1               ;         X&Y= DON'T CARE      *
+00F4A8  1               ;                              *
+00F4A8  1               ;   EXIT  ACC= TIMER HIGH BYTE *
+00F4A8  1               ;           Y= TIMER LOW BYTE  *
+00F4A8  1               ;         CARRY CLEAR          *
+00F4A8  1               ;                              *
+00F4A8  1               ;    IF CARRY SET, ROUTINE     *
+00F4A8  1               ;       WAS INTERRUPTED &      *
+00F4A8  1               ;     ACC & Y ARE INVALID      *
+00F4A8  1               ;*******************************
+00F4A8  1               ;
+00F4A8  1               TIMLATCH   =       $FFD9
+00F4A8  1               TIMER1L    =       $FFD8
+00F4A8  1               TIMER1H    =       $FFD9
+00F4A8  1               JOYRDY     =       $C066
+00F4A8  1               
+00F4A8  1               ANALOG     =       *         ; CARRY SHOULD BE SET!
+00F4A8  1  8D D9 FF                STA     TIMLATCH     ; START THE TIMER!
+00F4AB  1  AD EF FF     ANLOG1:    LDA     INTERUPT
+00F4AE  1  2D 66 C0                AND     JOYRDY       ; WAIT FOR ONE OR THE OTHER TO GO LOW
+00F4B1  1  30 F8                   BMI     ANLOG1
+00F4B3  1  AD 66 C0                LDA     JOYRDY       ; WAS IT REALLY THE JOPYSTICK?
+00F4B6  1  30 0C                   BMI     GOODTIME     ; NOPE, WHAT TIME IS IT?
+00F4B8  1  18                      CLC                  ; TIME'S A SLIP SLIDIN AWAY
+00F4B9  1  AD D9 FF                LDA     TIMER1H      ; NOW, WHAT TIME IS IT?
+00F4BC  1  AC D8 FF                LDY     TIMER1L
+00F4BF  1  10 03                   BPL     GOODTIME     ; TIME WAS VALID!
+00F4C1  1  AD D9 FF                LDA     TIMER1H      ; HI BYTE CHANGED
+00F4C4  1  60           GOODTIME:  RTS
+00F4C5  1               
+00F4C5  1               ;           .END
+00F4C5  1               

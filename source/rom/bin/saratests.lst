@@ -1,0 +1,565 @@
+ca65 V2.19 - Git ad7c5a661
+Main file   : saratests.s
+Current file: saratests.s
+
+000000r 1               ;******************************************************************
+000000r 1               ;* APPLE /// ROM - DIAGNOSTIC ROUTINES
+000000r 1               ;* COPYRIGHT 1979 BY APPLE COMPUTER, INC.
+000000r 1               ;******************************************************************
+000000r 1               
+000000r 1                          .setcpu "6502"
+000000r 1                          .segment "CODE"
+000000r 1               
+000000r 1               ;           .ABSOLUTE
+000000r 1               ;           .PROC   SARATESTS
+000000r 1               
+000000r 1               ;******************************************************************
+000000r 1               ;
+000000r 1               ; SARA DIAGNOSTIC TEST ROUTINES
+000000r 1               ;
+000000r 1               ; DECEMBER 18,1979
+000000r 1               ;  BY
+000000r 1               ; W. BROEDNER & R. LASHLEY 0000
+000000r 1               ;
+000000r 1               ; COPYRIGHT 1979 BY APPLE COMPUTER, INC.
+000000r 1               ;
+000000r 1               ;******************************************************************
+000000r 1               
+000000r 1               ROM        =    $01
+000000r 1               ZRPG       =    $00
+000000r 1               ZRPG1      =    $10
+000000r 1               PTRLO      =    ZRPG1+$08
+000000r 1               PTRHI      =    ZRPG1+$09
+000000r 1               BNK        =    ZRPG1+$0A
+000000r 1               IBCMD      =    $87
+000000r 1               IBBUFP     =    $85
+000000r 1               PREVTRK    =    $91
+000000r 1               BLOCKIO    =    $F479
+000000r 1               CV         =    $5D
+000000r 1               STK0       =    $FF
+000000r 1               IBNK       =    $1400+PTRHI
+000000r 1               PHPR       =    $1800+ZRPG1
+000000r 1               KYBD       =    $C000
+000000r 1               KEYBD      =    $C008
+000000r 1               KBDSTRB    =    $C010
+000000r 1               PDLEN      =    $C058
+000000r 1               ADRS       =    $C047
+000000r 1               GRMD       =    $C050
+000000r 1               TXTMD      =    $C051
+000000r 1               ADTO       =    $C066
+000000r 1               DISKOFF    =    $C0D0
+000000r 1               ACIAST     =    $C0F1
+000000r 1               ACIACM     =    $C0F2
+000000r 1               ACIACN     =    $C0F3
+000000r 1               SLT1       =    $C100
+000000r 1               SLT2       =    $C200
+000000r 1               SLT3       =    $C300
+000000r 1               SLT4       =    $C400
+000000r 1               EXPROM     =    $CFFF
+000000r 1               ZPREG      =    $FFD0
+000000r 1               SYSD1      =    $FFDF
+000000r 1               SYSD2      =    $FFD2
+000000r 1               SYSD3      =    $FFD3
+000000r 1               SYSEO      =    $FFE0
+000000r 1               BNKSW      =    $FFEF
+000000r 1               SYSE2      =    $FFE2
+000000r 1               SYSE3      =    $FFE3
+000000r 1               COUT       =    $FC39
+000000r 1               CROUT1     =    $FD07
+000000r 1               KEYIN      =    $FD0F
+000000r 1               SETCVH     =    $FBDB
+000000r 1               CLDSTRT    =    $FD98
+000000r 1               SETUP      =    $FD9D
+000000r 1               MONITOR    =    $F901
+000000r 1               ;
+000000r 1                          .ORG    $F4C5
+00F4C5  1  00 B1 B2 BA  RAMTBL:    .BYTE   $00,$B1,$B2,$BA,$B9,$10,$00,$13
+00F4C9  1  B9 10 00 13  
+00F4CD  1               
+00F4CD  1               CHPG       =    *
+00F4CD  1  52 41                   .BYTE  "RA"
+00F4CF  1  CD                      .BYTE   $CD          ; M
+00F4D0  1  52 4F                   .BYTE  "RO"
+00F4D2  1  CD                      .BYTE   $CD          ; M
+00F4D3  1  56 49                   .BYTE  "VI"
+00F4D5  1  C1                      .BYTE   $C1          ; A
+00F4D6  1  41 43 49                .BYTE  "ACI"
+00F4D9  1  C1                      .BYTE   $C1          ; A
+00F4DA  1  41 2F                   .BYTE  "A/"
+00F4DC  1  C4                      .BYTE   $C4          ; D
+00F4DD  1  44 49 41 47             .BYTE  "DIAGNOSTI"
+00F4E1  1  4E 4F 53 54  
+00F4E5  1  49           
+00F4E6  1               
+00F4E6  1  C3                      .BYTE   $C3          ; C
+00F4E7  1  5A                      .BYTE  "Z"
+00F4E8  1  D0                      .BYTE   $D0          ; P
+00F4E9  1  52 45 54 52             .BYTE  "RETR"
+00F4ED  1  D9                      .BYTE   $D9          ; Y
+00F4EE  1               ;
+00F4EE  1               ; SETUP SYSTEM
+00F4EE  1               ;
+00F4EE  1               ;
+00F4EE  1  A9 53                   LDA     #$52+ROM     ; TURN OFF SCREEN, SET 2MHZ SPEED
+00F4F0  1  8D DF FF                STA     SYSD1        ; AND RUN OFF ROM
+00F4F3  1  A2 00                   LDX     #00          ; SET BANK SWITCH TO ZERO
+00F4F5  1  8E E0 FF                STX     SYSEO
+00F4F8  1  8E EF FF                STX     BNKSW
+00F4FB  1  8E D0 FF                STX     ZPREG        ; AND SET ZERO PAGE SAME
+00F4FE  1  CA                      DEX
+00F4FF  1  8E D2 FF                STX     SYSD2        ; PROGRAM DDR'S
+00F502  1  8E D3 FF                STX     SYSD3
+00F505  1  9A                      TXS
+00F506  1  E8                      INX
+00F507  1  A9 0F                   LDA     #$0F
+00F509  1  8D E3 FF                STA     SYSE3
+00F50C  1  A9 3F                   LDA     #$3F
+00F50E  1  8D E2 FF                STA     SYSE2
+00F511  1  A0 0E                   LDY     #$0E
+00F513  1  B9 D0 C0     DISK1:     LDA     DISKOFF,Y
+00F516  1  88                      DEY
+00F517  1  88                      DEY
+00F518  1  10 F9                   BPL     DISK1
+00F51A  1  AD 08 C0                LDA     KEYBD
+00F51D  1  29 04                   AND     #04
+00F51F  1  D0 03                   BNE     NXBYT
+00F521  1  4C 86 F6                JMP     RECON
+00F524  1               ;
+00F524  1               ; VERIFY ZERO PAGE
+00F524  1               ;
+00F524  1  A9 01        NXBYT:     LDA     #01          ; ROTATE A 1 THROUGH
+00F526  1  95 00        NXBIT:     STA     ZRPG,X       ; EACH BIT IN THE 0 PG
+00F528  1  D5 00                   CMP     ZRPG,X       ; TO COMPLETELY TEST
+00F52A  1  D0 FE        NOGOOD:    BNE     NOGOOD       ; THE PAGE. HANG IF NOGOOD.
+00F52C  1  0A                      ASL     A            ; TRY NEXT BIT OF BYTE
+00F52D  1  D0 F7                   BNE     NXBIT        ; UNTIL BYTE IS ZERO.
+00F52F  1  E8                      INX                  ; CONTINUE UNTIL PAGE
+00F530  1  D0 F2                   BNE     NXBYT        ; IS DONE.
+00F532  1  8A           CNTWR:     TXA                  ; PUSH A DIFFERENT
+00F533  1  48                      PHA                  ; BYTE ONTO THE
+00F534  1  E8                      INX                  ; STACK UNTIL ALL
+00F535  1  D0 FB                   BNE     CNTWR        ; STCK BYTES ARE FULL.
+00F537  1  CA                      DEX                  ; THEN PULL THEM
+00F538  1  86 18                   STX     PTRLO        ; OFF AND COMPARE TO
+00F53A  1  68           PULBT:     PLA                  ; THE COUNTER GOING
+00F53B  1  C5 18                   CMP     PTRLO        ; BACKWARDS. HANG IF
+00F53D  1  D0 EB                   BNE     NOGOOD       ; THEY DON'T AGREE.
+00F53F  1  C6 18                   DEC     PTRLO        ; GET NEXT COUNTER BYTE
+00F541  1  D0 F7                   BNE     PULBT        ; CONTINUE UNTIL STACK
+00F543  1  68                      PLA                  ; IS DONE. TEST LAST BYTE
+00F544  1  D0 E4                   BNE     NOGOOD       ; AGAINST ZERO.
+00F546  1               ;
+00F546  1               ; SIZE IN MEMORY
+00F546  1               ;
+00F546  1  A2 08                   LDX     #08          ; ZERO THE BYTES USED TO DISPLAY
+00F548  1  95 10        NOMEM:     STA     ZRPG1,X      ; THE BAD RAM LOCATIONS
+00F54A  1  CA                      DEX                  ; EACH BYTE= A CAS LINE
+00F54B  1  10 FB                   BPL     NOMEM        ; ON THE SARA BOARD.
+00F54D  1  A2 02                   LDX     #02          ; STARTING AT PAGE 2
+00F54F  1  86 19        NMEM1:     STX     PTRHI        ; TEST THE LAST BYTE
+00F551  1  A9 00                   LDA     #00          ; IN EACH MEM PAGE TO
+00F553  1  A0 FF                   LDY     #$FF         ; SEE IF THE CHIPS ARE
+00F555  1  91 18                   STA     (PTRLO),Y    ; THERE..(AVOID 0 & STK PAGES)
+00F557  1  D1 18                   CMP     (PTRLO),Y    ; CAN THE BYTE BE O'D?
+00F559  1  F0 07                   BEQ     NMEM2
+00F55B  1  20 48 F7                JSR     RAM          ; NO, FIND WHICH CAS IT IS.
+00F55E  1  94 10                   STY     ZRPG1,X      ; SET CORRES. BYTE TO $FF
+00F560  1  A6 19                   LDX     PTRHI        ; RESTORE X REGISTER
+00F562  1  E8           NMEM2:     INX                  ; AND INCREMENT TO NEXT
+00F563  1  E0 C0                   CPX     #$C0         ; PAGE UNTIL I/O IS REACHED.
+00F565  1  D0 E8                   BNE     NMEM1
+00F567  1  A2 20                   LDX     #$20         ; THEN RESET TO PAGE 20
+00F569  1  EE EF FF                INC     BNKSW        ; AND GOTO NEXT BANK TO
+00F56C  1  AD EF FF                LDA     BNKSW        ; CONTINUE.(MASK INPUTS
+00F56F  1  29 0F                   AND     #$0F         ; FROM BANKSWITCH TO SEE
+00F571  1  C9 03                   CMP     #03          ; WHAT SWITCH IS SET TO)
+00F573  1  D0 DA                   BNE     NMEM1        ; CONTINUE UNTIL BANK '3'
+00F575  1               ;
+00F575  1               ; SETUP SCREEN
+00F575  1               ;
+00F575  1  20 9D FD     ERRLP:     JSR     SETUP        ; CALL SCRN SETUP ROUTINE
+00F578  1  A2 00                   LDX     #00          ; SETUP I/O AGAIN
+00F57A  1  8E E0 FF                STX     SYSEO        ; FOR VIA TEST
+00F57D  1  CA                      DEX                  ; PROGRAM DATA DIR
+00F57E  1  8E D2 FF                STX     SYSD2        ; REGISTERS
+00F581  1  8E D3 FF                STX     SYSD3
+00F584  1  A9 3F                   LDA     #$3F
+00F586  1  8D E2 FF                STA     SYSE2
+00F589  1  A9 0F                   LDA     #$0F
+00F58B  1  8D E3 FF                STA     SYSE3
+00F58E  1  A2 10                   LDX     #$10         ; HEADING OF 'DIAGNOSTICS' WITH
+00F590  1  20 38 F7                JSR     STRWT        ; THIS SUBROUTINE
+00F593  1  A2 00        ERRLP1:    LDX     #00          ; PRINT 'RAM'
+00F595  1  86 5D                   STX     CV           ; SET CURSOR TO 2ND LINE
+00F597  1  A9 04                   LDA     #04          ; SPACE CURSOR OUT 3
+00F599  1  20 DB FB                JSR     SETCVH       ; (X STILL=0 ON RETURN)
+00F59C  1  20 38 F7                JSR     STRWT        ; THE SAME SUBROUTINE
+00F59F  1  A2 07                   LDX     #07          ; FOR BYTES 7 - 0 IN
+00F5A1  1               RAMWT1     =    *
+00F5A1  1  B5 10                   LDA     ZRPG1,X      ; OUT EACH BIT AS A
+00F5A3  1  A0 08                   LDY     #08          ; ' ' OR '1' FOR INDICATE BAD OR MISSING RAM
+00F5A5  1  0A           RAMWT2:    ASL     A            ; CHIPS SUBROUTINE 'RAM'        RAM
+00F5A6  1  48                      PHA                  ; SETS UP THESE BYTES
+00F5A7  1  A9 AE                   LDA     #$AE         ; LOAD A '.' TO ACC.
+00F5A9  1  90 02                   BCC     RAMWT4
+00F5AB  1  A9 31                   LDA     #$31         ; LOAD A '1' TO ACC.
+00F5AD  1  20 39 FC     RAMWT4:    JSR     COUT         ; AND PRINT IT
+00F5B0  1  68                      PLA                  ; RESTORE BYTE
+00F5B1  1  88                      DEY                  ; AND ROTATE ALL 8
+00F5B2  1  D0 F1                   BNE     RAMWT2       ; TIMES
+00F5B4  1  20 07 FD                JSR     CROUT1       ; CLEAR TO END OF LINE.
+00F5B7  1  CA                      DEX
+00F5B8  1  10 E7                   BPL     RAMWT1
+00F5BA  1               ;
+00F5BA  1               ; ZPG & STK TEST
+00F5BA  1               ;
+00F5BA  1  9A                      TXS
+00F5BB  1  8C EF FF                STY     BNKSW
+00F5BE  1  98           ZP1:       TYA
+00F5BF  1  8D D0 FF                STA     ZPREG
+00F5C2  1  85 FF                   STA     STK0
+00F5C4  1  C8                      INY
+00F5C5  1  98                      TYA
+00F5C6  1  48                      PHA
+00F5C7  1  68                      PLA
+00F5C8  1  C8                      INY
+00F5C9  1  C0 20                   CPY     #$20
+00F5CB  1  D0 F1                   BNE     ZP1
+00F5CD  1  A0 00                   LDY     #00
+00F5CF  1  8C D0 FF                STY     ZPREG
+00F5D2  1  86 18                   STX     PTRLO
+00F5D4  1  E8           ZP2:       INX
+00F5D5  1  86 19                   STX     PTRHI
+00F5D7  1  8A                      TXA
+00F5D8  1  D1 18                   CMP     (PTRLO),Y
+00F5DA  1  D0 06                   BNE     ZP3
+00F5DC  1  E0 1F                   CPX     #$1F
+00F5DE  1  D0 F4                   BNE     ZP2
+00F5E0  1  F0 05                   BEQ     ROMTST
+00F5E2  1               ZP3        =       *            ; CHIP IS THERE, BAD ZERO AND STACK
+00F5E2  1  A2 1A                   LDX     #$1A         ; SO PRINT 'ZP' MESSAGE
+00F5E4  1  20 7B F7                JSR     MESSERR      ; & SET FLAG (2MHZ MODE)
+00F5E7  1               ;
+00F5E7  1               ; ROM TEST ROUTINE
+00F5E7  1               ;
+00F5E7  1  A9 00        ROMTST:    LDA     #00          ; SET POINTERS TO
+00F5E9  1  A8                      TAY                  ; $F000
+00F5EA  1  A2 F0                   LDX     #$F0
+00F5EC  1  85 18                   STA     PTRLO
+00F5EE  1  86 19                   STX     PTRHI        ; SET X TO $FF
+00F5F0  1  A2 FF                   LDX     #$FF         ; FOR WINDOWING I/O
+00F5F2  1  51 18        ROMTST1:   EOR     (PTRLO),Y    ; COMPUTE CHKSUM ON
+00F5F4  1  E4 19                   CPX     PTRHI
+00F5F6  1  D0 06                   BNE     ROMTST2      ; EACH ROM BYTE,
+00F5F8  1  C0 BF                   CPY     #$BF         ; RANGES FFC0-FFEF
+00F5FA  1  D0 02                   BNE     ROMTST2
+00F5FC  1  A0 EF                   LDY     #$EF
+00F5FE  1  C8           ROMTST2:   INY
+00F5FF  1  D0 F1                   BNE     ROMTST1
+00F601  1  E6 19                   INC     PTRHI
+00F603  1  D0 ED                   BNE     ROMTST1
+00F605  1  A8                      TAY                  ; TEST ACC. FOR 0
+00F606  1  F0 05                   BEQ     VIATST       ; YES, NEXT TEST
+00F608  1  A2 03                   LDX     #03          ; PRINT 'ROM' AND
+00F60A  1  20 7B F7                JSR     MESSERR      ; SET ERROR
+00F60D  1               ;
+00F60D  1               ; VIA TEST ROUTINE
+00F60D  1               ;
+00F60D  1  18           VIATST:    CLC                  ; SET UP FOR ADDING BYTES
+00F60E  1  D8                      CLD
+00F60F  1  AD E0 FF                LDA     SYSEO        ; MASK OFF INPUT BITS
+00F612  1  29 3F                   AND     #$3F         ; AND STORE BYTE IN
+00F614  1  85 18                   STA     PTRLO        ; TEMPOR. LOCATION
+00F616  1  AD EF FF                LDA     BNKSW        ; MASK OFF INPUT BITS
+00F619  1  29 4F                   AND     #$4F         ; AND ADD TO STORED
+00F61B  1  65 18                   ADC     PTRLO        ; BYTE IN TEMP. LOC.
+00F61D  1  6D D0 FF                ADC     ZPREG        ; ADD REMAINING
+00F620  1  85 18                   STA     PTRLO        ; REGISTERS OF THE
+00F622  1  AD DF FF                LDA     SYSD1        ; VIA'S
+00F625  1  29 5F                   AND     #$5F         ; (MASK THIS ONE)
+00F627  1  65 18                   ADC     PTRLO        ; AND TEST
+00F629  1  6D D2 FF                ADC     SYSD2        ; TO SEE
+00F62C  1  6D D3 FF                ADC     SYSD3        ; IF THEY AGREE
+00F62F  1  6D E2 FF                ADC     SYSE2        ; WITH THE RESET
+00F632  1  6D E3 FF                ADC     SYSE3        ; CONDITION.
+00F635  1  C9 E1                   CMP     #$E0+ROM     ;  =E1?
+00F637  1  F0 05                   BEQ     ACIA         ; YES, NEXT TEST
+00F639  1  A2 06                   LDX     #06          ; NO, PRINT 'VIA' MESS
+00F63B  1  20 7B F7                JSR     MESSERR      ; AND SET ERROR FLAG
+00F63E  1               ;
+00F63E  1               ; ACIA TEST
+00F63E  1               ;
+00F63E  1  18           ACIA:      CLC                  ; SET UP FOR ADDITION
+00F63F  1  A9 9F                   LDA     #$9F         ; MASK INPUT BITS
+00F641  1  2D F1 C0                AND     ACIAST       ; FROM STATUS REG
+00F644  1  6D F2 C0                ADC     ACIACM       ; AND ADD DEFAULT STATES
+00F647  1  6D F3 C0                ADC     ACIACN       ; OIF CONTROL AND COMMAND
+00F64A  1  C9 10                   CMP     #$10         ; REGS.        =10?
+00F64C  1  F0 05                   BEQ     ATD          ; YES, NEXT TEST
+00F64E  1  A2 09                   LDX     #09          ; NO,        'ACIA' MESSAGE AND
+00F650  1  20 7B F7                JSR     MESSERR      ; THEN SET ERROR FLAG
+00F653  1               ;
+00F653  1               ; A/D TEST ROUTINE
+00F653  1               ;
+00F653  1  A9 C0        ATD:       LDA     #$C0
+00F655  1  8D DC FF                STA     $FFDC
+00F658  1  AD 5A C0                LDA     PDLEN+2
+00F65B  1  AD 5E C0                LDA     PDLEN+6
+00F65E  1  AD 5C C0                LDA     PDLEN+4
+00F661  1  A0 20                   LDY     #$20
+00F663  1  88           ADCTST1:   DEY                  ; WAIT FOR 40 USEC
+00F664  1  D0 FD                   BNE     ADCTST1
+00F666  1  AD 5D C0                LDA     PDLEN+5      ; SET A/D RAMP
+00F669  1  C8           ADCTST3:   INY                  ; COUNT FOR CONVERSION
+00F66A  1  F0 0A                   BEQ     ADCERR
+00F66C  1  AD 66 C0                LDA     ADTO         ; IF BIT 7=1?
+00F66F  1  30 F8                   BMI     ADCTST3      ; YES, CONTINUE
+00F671  1  98                      TYA                  ; NO, MOVE COUNT TO ACC
+00F672  1  29 E0                   AND     #$E0         ; ACC<32
+00F674  1  F0 05                   BEQ     KEYPLUG
+00F676  1               ADCERR     =       *            ; NO
+00F676  1  A2 0D                   LDX     #$0D         ; PRINT 'A/D' MESS
+00F678  1  20 7B F7                JSR     MESSERR      ; AND SET ERROR FLAG
+00F67B  1               ;
+00F67B  1               ; KEYBOARD PLUGIN TEST
+00F67B  1               ;
+00F67B  1  AD 08 C0     KEYPLUG:   LDA     KEYBD        ; IS KYBD PLUGGED IN?
+00F67E  1  0A                      ASL     A            ; (IS LIGHT CURRENT
+00F67F  1  10 41                   BPL     SEX          ; PRESENT?) NO, BRANCH
+00F681  1  AD DF FF                LDA     SYSD1        ; IS ERROR FLAG SET?
+00F684  1  30 3C                   BMI     SEX          ; ERROR HANG
+00F686  1               ;
+00F686  1               ; RECONFIGURE THE SYSTEM
+00F686  1               ;
+00F686  1  A9 77        RECON:     LDA     #$77         ; TURN ON SCREEN
+00F688  1  8D DF FF                STA     SYSD1
+00F68B  1  20 98 FD                JSR     CLDSTRT      ; INITIALIZE MONITOR AND DEFAULT CHARACTER SET
+00F68E  1  2C 10 C0                BIT     KBDSTRB      ; CLEAR KEYBOARD
+00F691  1  AD FF CF                LDA     EXPROM       ; DISABLE ALL SLOTS
+00F694  1  AD 20 C0                LDA     $C020
+00F697  1  A9 10                   LDA     #$10         ; TEST FOR "APPLE 1"
+00F699  1  2D 08 C0                AND     KEYBD
+00F69C  1  D0 03                   BNE     BOOT         ; NO, DO REGULAR BOOT
+00F69E  1  20 01 F9                JSR     MONITOR      ; AND NEVER COME BACK
+00F6A1  1  A2 01        BOOT:      LDX     #01          ; READ BLOCK 0
+00F6A3  1  86 87                   STX     IBCMD
+00F6A5  1  CA                      DEX
+00F6A6  1  86 85                   STX     IBBUFP       ; INTO RAM AT $AOOO
+00F6A8  1  A9 A0                   LDA     #$A0
+00F6AA  1  85 86                   STA     IBBUFP+1
+00F6AC  1  4A                      LSR     A            ; FOR TRACK 80
+00F6AD  1  85 91                   STA     PREVTRK      ; MAKE IT RECALIBRATE TOO!
+00F6AF  1  8A                      TXA
+00F6B0  1  20 79 F4                JSR     BLOCKIO
+00F6B3  1  90 0A                   BCC     GOBOOT       ; IF WE'VE SUCCEEDED. DO IT UP
+00F6B5  1  A2 1C                   LDX     #$1C
+00F6B7  1  20 38 F7                JSR     STRWT        ; 'RETRY'
+00F6BA  1  20 0F FD                JSR     KEYIN
+00F6BD  1  B0 E2                   BCS     BOOT
+00F6BF  1  4C 00 A0     GOBOOT:    JMP     $A000        ; GO TO IT FOOL...
+00F6C2  1               ;
+00F6C2  1               ; SYSTEM EXCERCISER
+00F6C2  1               ;
+00F6C2  1  A0 7F        SEX:       LDY     #$7F         ; TRY FROM
+00F6C4  1  98           SEX1:      TYA                  ; $7F TO 0
+00F6C5  1  29 FE                   AND     #$FE         ; ADD.=
+00F6C7  1  49 4E                   EOR     #$4E         ; $4E OR $4F
+00F6C9  1  F0 03                   BEQ     SEX2         ; YES,        SKP
+00F6CB  1  B9 00 C0                LDA     KYBD,Y       ; NO, CONT
+00F6CE  1  88           SEX2:      DEY                  ; NEXT ADD
+00F6CF  1  D0 F3                   BNE     SEX1
+00F6D1  1  AD 51 C0                LDA     TXTMD        ; SET TXT
+00F6D4  1  B9 00 C1     SEX3:      LDA     SLT1,Y       ; EXCERCISE
+00F6D7  1  B9 00 C2                LDA     SLT2,Y       ; ALL
+00F6DA  1  B9 00 C3                LDA     SLT3,Y       ; SLOTS
+00F6DD  1  B9 00 C4                LDA     SLT4,Y
+00F6E0  1  AD FF CF                LDA     EXPROM       ; DISABLE EXPANSION ROM AREA
+00F6E3  1  C8                      INY
+00F6E4  1  D0 EE                   BNE     SEX3
+00F6E6  1               ;
+00F6E6  1               ; RAM TEST ROUTINE
+00F6E6  1               ;
+00F6E6  1  A9 73        USRENTRY:  LDA     #$72+ROM
+00F6E8  1  8D DF FF                STA     SYSD1
+00F6EB  1  A9 18                   LDA     #$18
+00F6ED  1  8D D0 FF                STA     ZPREG
+00F6F0  1  A9 00                   LDA     #00
+00F6F2  1  A2 07                   LDX     #07
+00F6F4  1  95 10        RAMTSTO:   STA     ZRPG1,X
+00F6F6  1  CA                      DEX
+00F6F7  1  10 FB                   BPL     RAMTSTO
+00F6F9  1  20 84 F7                JSR     RAMSET
+00F6FC  1  08                      PHP
+00F6FD  1  20 F6 F7     RAMTST1:   JSR     RAMWT
+00F700  1  20 F6 F7                JSR     RAMWT
+00F703  1  28                      PLP
+00F704  1  6A                      ROR     A
+00F705  1  08                      PHP
+00F706  1  20 A1 F7                JSR     PTRINC
+00F709  1  D0 F2                   BNE     RAMTST1
+00F70B  1  20 84 F7                JSR     RAMSET
+00F70E  1  08                      PHP
+00F70F  1  20 FA F7     RAMTST4:   JSR     RAMRD
+00F712  1  48                      PHA
+00F713  1  A9 00                   LDA     #00
+00F715  1  91 18                   STA     (PTRLO),Y
+00F717  1  68                      PLA
+00F718  1  28                      PLP
+00F719  1  6A                      ROR     A
+00F71A  1  08                      PHP
+00F71B  1  20 A1 F7                JSR     PTRINC
+00F71E  1  D0 EF                   BNE     RAMTST4
+00F720  1               ;
+00F720  1               ; RETURN TO START
+00F720  1               ;
+00F720  1  A9 00                   LDA     #00
+00F722  1  8D EF FF                STA     BNKSW
+00F725  1  8D D0 FF                STA     ZPREG
+00F728  1  A2 07                   LDX     #07
+00F72A  1  BD 10 18     RAMTST6:   LDA     PHPR,X
+00F72D  1  95 10                   STA     ZRPG1,X
+00F72F  1  CA                      DEX
+00F730  1  10 F8                   BPL     RAMTST6
+00F732  1  20 7E F7                JSR     ERROR
+00F735  1  4C 75 F5                JMP     ERRLP
+00F738  1               ;
+00F738  1               ;******************************
+00F738  1               ; SARA TEST SUBROUTINES
+00F738  1               ;******************************
+00F738  1               ;
+00F738  1  BD CD F4     STRWT:     LDA     CHPG,X
+00F73B  1  48                      PHA
+00F73C  1  09 80                   ORA     #$80         ; NORMAL VIDEO
+00F73E  1  20 39 FC                JSR     COUT         ; & PRINT
+00F741  1  E8                      INX                  ; NXT
+00F742  1  68                      PLA                  ; CHR
+00F743  1  10 F3                   BPL     STRWT
+00F745  1  4C 07 FD                JMP     CROUT1       ; CLR TO END OF LINE
+00F748  1               ;
+00F748  1               ; SUBROUTINE RAM
+00F748  1               ;
+00F748  1  48           RAM:       PHA                  ; SV ACC
+00F749  1  8A                      TXA                  ; CONVRT
+00F74A  1  4A                      LSR     A            ; ADD TO
+00F74B  1  4A                      LSR     A            ; USE FOR
+00F74C  1  4A                      LSR     A            ; 8 ENTRY
+00F74D  1  4A                      LSR     A
+00F74E  1  08                      PHP
+00F74F  1  4A                      LSR     A
+00F750  1  28                      PLP
+00F751  1  AA                      TAX                  ; LOOKUP
+00F752  1  BD C5 F4                LDA     RAMTBL,X     ; IF VAL
+00F755  1  10 14                   BPL     RAMO         ; <0, GET
+00F757  1  48                      PHA                  ; WHICH
+00F758  1  AD EF FF                LDA     BNKSW
+00F75B  1  29 0F                   AND     #$0F
+00F75D  1  AA                      TAX
+00F75E  1  68                      PLA
+00F75F  1  E0 00                   CPX     #00
+00F761  1  F0 13                   BEQ     RAM1         ; BANK?
+00F763  1  4A                      LSR     A            ; SET
+00F764  1  4A                      LSR     A            ; PROPER
+00F765  1  4A                      LSR     A            ; RAM
+00F766  1  CA                      DEX                  ; VAL
+00F767  1  D0 0D                   BNE     RAM1
+00F769  1  29 05                   AND     #05          ; CONVERT
+00F76B  1  D0 09        RAMO:      BNE     RAM1         ; TO VAL
+00F76D  1  8A                      TXA
+00F76E  1  F0 02                   BEQ     RAM00
+00F770  1  A9 03                   LDA     #03
+00F772  1  90 02        RAM00:     BCC     RAM1
+00F774  1  49 03                   EOR     #03
+00F776  1  29 07        RAM1:      AND     #07          ; BANKSW
+00F778  1  AA                      TAX
+00F779  1  68                      PLA
+00F77A  1  60                      RTS
+00F77B  1               ;
+00F77B  1               ; SUBROUTINE ERROR
+00F77B  1               ;
+00F77B  1  20 38 F7     MESSERR:   JSR     STRWT        ; PRINT MESSAGE FIRST
+00F77E  1  A9 F3        ERROR:     LDA     #$F2+ROM     ; SET 1
+00F780  1  8D DF FF                STA     SYSD1        ; MHZ MO
+00F783  1  60                      RTS
+00F784  1               ;
+00F784  1               ; SUBROUTINE RAMSET
+00F784  1               ;
+00F784  1  A2 01        RAMSET:    LDX     #01
+00F786  1  86 1A                   STX     BNK
+00F788  1  A0 00                   LDY     #00
+00F78A  1  A9 AA                   LDA     #$AA
+00F78C  1  38                      SEC
+00F78D  1  48           RAMSET1:   PHA
+00F78E  1  08                      PHP
+00F78F  1  A5 1A                   LDA     BNK
+00F791  1  09 80                   ORA     #$80
+00F793  1  8D 19 14                STA     IBNK
+00F796  1  A9 02                   LDA     #02
+00F798  1  85 19                   STA     PTRHI
+00F79A  1  A2 00                   LDX     #00
+00F79C  1  86 18                   STX     PTRLO
+00F79E  1  28                      PLP
+00F79F  1  68                      PLA
+00F7A0  1  60                      RTS
+00F7A1  1               ;
+00F7A1  1               ; SUBROUTINE PTRINC
+00F7A1  1               ;
+00F7A1  1  48           PTRINC:    PHA
+00F7A2  1  E6 18                   INC     PTRLO
+00F7A4  1  D0 1D                   BNE     RETS
+00F7A6  1  A5 1A                   LDA     BNK
+00F7A8  1  10 0E                   BPL     PINC1
+00F7AA  1  A5 19                   LDA     PTRHI
+00F7AC  1  C9 13                   CMP     #$13
+00F7AE  1  F0 06                   BEQ     PINC2
+00F7B0  1  C9 17                   CMP     #$17
+00F7B2  1  D0 04                   BNE     PINC1
+00F7B4  1  E6 19                   INC     PTRHI
+00F7B6  1  E6 19        PINC2:     INC     PTRHI
+00F7B8  1  E6 19        PINC1:     INC     PTRHI
+00F7BA  1  D0 07                   BNE     RETS
+00F7BC  1  C6 1A                   DEC     BNK
+00F7BE  1  C6 1A                   DEC     BNK
+00F7C0  1  20 8D F7                JSR     RAMSET1
+00F7C3  1  68           RETS:      PLA
+00F7C4  1  A6 1A                   LDX     BNK
+00F7C6  1  E0 FD                   CPX     #$FD
+00F7C8  1  60                      RTS
+00F7C9  1               ;
+00F7C9  1               ; SUBROUTINE RAMERR
+00F7C9  1               ;
+00F7C9  1  48           RAMERR:    PHA
+00F7CA  1  A6 19                   LDX     PTRHI
+00F7CC  1  A4 1A                   LDY     BNK
+00F7CE  1  30 19                   BMI     RAMERR4
+00F7D0  1  8A                      TXA
+00F7D1  1  30 1D                   BMI     RAMERR5
+00F7D3  1  18                      CLC
+00F7D4  1  69 20                   ADC     #$20
+00F7D6  1  8C EF FF     RAMERR2:   STY     BNKSW
+00F7D9  1  AA                      TAX
+00F7DA  1  20 48 F7     RAMERR3:   JSR     RAM
+00F7DD  1  68                      PLA
+00F7DE  1  48                      PHA
+00F7DF  1  A0 00                   LDY     #00
+00F7E1  1  51 18                   EOR     (PTRLO),Y
+00F7E3  1  15 10                   ORA     ZRPG1,X
+00F7E5  1  95 10                   STA     ZRPG1,X
+00F7E7  1  68                      PLA
+00F7E8  1  60                      RTS
+00F7E9  1  A9 00        RAMERR4:   LDA     #00
+00F7EB  1  8D EF FF                STA     BNKSW
+00F7EE  1  F0 EA                   BEQ     RAMERR3
+00F7F0  1  38           RAMERR5:   SEC
+00F7F1  1  E9 60                   SBC     #$60
+00F7F3  1  C8                      INY
+00F7F4  1  D0 E0                   BNE     RAMERR2
+00F7F6  1               ;
+00F7F6  1               ; SUBROUTINE RAMWT
+00F7F6  1               ;
+00F7F6  1  49 FF        RAMWT:     EOR     #$FF
+00F7F8  1  91 18                   STA     (PTRLO),Y
+00F7FA  1  D1 18        RAMRD:     CMP     (PTRLO),Y
+00F7FC  1  D0 CB                   BNE     RAMERR
+00F7FE  1               
+00F7FE  1               ;           .END
+00F7FE  1               
