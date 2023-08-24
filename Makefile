@@ -3,7 +3,7 @@
 
 include version.mk
 
-ZIP_FILE := DAN2on3_v$(VERSION).zip
+ZIP_FILE := DAN2on3_v$(CONFIG_VERSION).zip
 
 DISKS  := Apple3SOS.DAN2on3.Config.dsk  Apple3SOS.DAN2on3.SysUtils.dsk
 DRIVER := DAN2ON3.DRIVER

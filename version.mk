@@ -1,3 +1,3 @@
 
-VERSION := 2.0.1
+CONFIG_VERSION := 2.1.0
 

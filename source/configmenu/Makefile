@@ -4,24 +4,23 @@
 # include file with version
 include ../../version.mk
 
-VER_MAJOR := $(word 1,$(subst ., ,$(VERSION)))
-VER_MINOR := $(word 2,$(subst ., ,$(VERSION)))
-VER_MAINT := $(word 3,$(subst ., ,$(VERSION)))
+VER_MAJOR := $(word 1,$(subst ., ,$(CONFIG_VERSION)))
+VER_MINOR := $(word 2,$(subst ., ,$(CONFIG_VERSION)))
+VER_MAINT := $(word 3,$(subst ., ,$(CONFIG_VERSION)))
 
 VERSION_INFO := -DVER_MAJOR=$(VER_MAJOR) -DVER_MINOR=$(VER_MINOR) -DVER_MAINT=$(VER_MAINT)
 
 # assembler source
-ASM_FILE := configmenu.s
+ASM_FILE := bootpg_v6.s
 # linked output
 O65_FILE := $(addprefix bin/,$(ASM_FILE:.s=.o65))
-# Input disk file
-INPUT_DISK  := ../disk/Apple3SOS1.3SysUtils.dsk
 # Output disk file
-OUTPUT_DISK := bin/Apple3SOS.DAN2on3.Config.dsk
+OUTPUT_DISK := bin/Apple3SOS.DAN2on3.Config.po
 # Temporary disk file
-TEMP_DISK := bin/temp.dsk
+TEMP_DISK := bin/temp.po
 # Build Utilities
 DSK2PO     := python3 ../../tools/dsk2po/dsk2po.py
+PO2DSK     := python3 ../../tools/dsk2po/dsk2po.py --reversed
 APPLE_BOOT := python3 ../../tools/AppleBoot/makeAppleBootDisk.py
 AppleCommander := java -jar ../../tools/AppleCommander/AppleCommander-ac-1.8.0.jar
 
@@ -48,23 +47,21 @@ bin/%.o65: bin/%.o
 	ld65 -tnone $< -o $@
 
 $(OUTPUT_DISK): $(O65_FILE)
-	$(ECHO) "$(LOG_PREFIX) Preparing empty Apple III SOS disk..."
-	cp $(INPUT_DISK) $(TEMP_DISK)
-	$(AppleCommander) -d $(TEMP_DISK) SOS.KERNEL
-	$(AppleCommander) -d $(TEMP_DISK) SOS.DRIVER
-	$(AppleCommander) -d $(TEMP_DISK) SOS.INTERP
-	$(AppleCommander) -d $(TEMP_DISK) SYSTEM.PASCAL
-	$(AppleCommander) -d $(TEMP_DISK) SYSTEM.MISCINFO
-	$(AppleCommander) -d $(TEMP_DISK) SYSTEM.STARTUP
-	$(ECHO) "$(LOG_PREFIX) Setting volume name..."
-	$(AppleCommander) -n $(TEMP_DISK) DAN2ON3.CONFIG
+	$(ECHO) "$(LOG_PREFIX) Creating disk image..."
+	$(AppleCommander) -pro140 $(TEMP_DISK) DAN2ON3.BOOT
+	# we use a little trick to squeeze a larger bootloader on the disk,
+	# but still keep it in a valid SOS/PRODOS format: we add a dummy file to
+	# occupy some space - but then reuse the file content space for the extra
+	# blocks of the bootloader
+	$(ECHO) "$(LOG_PREFIX) Adding dummy placeholder for bootloader to disk..."
+	cat dummydata.txt | $(AppleCommander) -p $(TEMP_DISK) RESERVED BIN
 	$(ECHO) "$(LOG_PREFIX) Adding separate driver file to disk..."
-	cat ../../bin/DAN2ON3.DRIVER | $(AppleCommander) -p $(TEMP_DISK) DAN2ON3.DRIVER SOS
+	cat ../driver/bin/DAN2ON3.DRIVER | $(AppleCommander) -p $(TEMP_DISK) DAN2ON3.DRIVER SOS
 	$(ECHO) "$(LOG_PREFIX) Patching bootloader to disk $@"
-	$(APPLE_BOOT) $< $(TEMP_DISK) $(OUTPUT_DISK)
+	$(APPLE_BOOT) --po --extrablocks 0x1200 $< $(TEMP_DISK) $(OUTPUT_DISK)
 	rm $(TEMP_DISK)
 	cp $@ ../../bin/.
-	$(DSK2PO) ../../bin/$(notdir $@)
+	$(PO2DSK) ../../bin/$(notdir $@)
 
 # show disk contents
 list:
