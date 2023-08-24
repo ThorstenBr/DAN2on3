@@ -32,13 +32,19 @@ The configuration disk automatically detects whether the DAN II controller is pl
 It also shows the list of available volume files present on the SD cards.
 
 Configuration is identical/similar as known from the Apple II:
+
 * Options "0"-"9" and "A"-"F" selects the respective volume file from the SD-disk (e.g. the respective "BLKDEV00.PO", ..., "BLKDEV0F.PO", or, when using new firmware, "VOL00...PO", "VOL0F...PO").
 * The currently selected volume is highlighted.
 * Pressing RETURN keeps the current selection for the respective card.
+* Press "I" to configure the IP address of the FTP server (if you have the Wiznet 5500 module attached).
+* See the [DANII controller documentation](https://github.com/ThorstenBr/Apple2Card) for details.
 
-See the [DANII controller documentation](https://github.com/ThorstenBr/Apple2Card) for details.
+**Note:**
 
-Apple III SOS volume images of up to 16MB (32767 * 512 bytes) are supported. With Apple II ProDOS up to 32MB (65535 * 512 bytes) may be used, however, the larger 32MB images are not properly handled by Apple III SOS (though the file system itself is identical between Apple II ProDOS and Apple /// SOS).
+* The menu now supports the flexible volume mapping, which is supported by newer firmware: volumes 1 + 2 may be selected from any of the 32 volumes (independently of the SD card).
+If, however, you are using a DANII controller card with older firmware, then you have to restrict to select volume 1 on SD card 1 and volume 2 on SD card 2 (the menu does not check your firmware version).
+* Apple III SOS volume images of up to 16MB (32767 * 512 bytes) are supported. With Apple II ProDOS up to 32MB (65535 * 512 bytes) may be used, however, the larger 32MB images are not properly handled by Apple III SOS (though the file system itself is identical between Apple II ProDOS and Apple /// SOS).
+
 
 ![Apple III - DAN2on3 Configuration Menu](photos/DAN2on3_ConfigMenu.jpg)
 
