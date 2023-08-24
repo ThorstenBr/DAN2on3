@@ -2,31 +2,41 @@
 # unscramble dsk into po
 # Paul Hagstrom, Dec 2015
 import sys, getopt, re
+
+g_Reversed = False
+
 def main(argv=None):
-	print("dsk2po - convert dsk files to po files")
+	global g_Reversed
+	print("dsk2po - convert dsk files to po files (or vice versa)")
 
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], '')
+		opts, args = getopt.getopt(sys.argv[1:], '', ["reversed"])
 	except getopt.GetoptError as err:
 		print(str(err))
 		usage()
 		return 1
+	if ("--reversed","") in opts:
+		g_Reversed = True
 	try:
 		dskfilename = args[0]
 	except:
 		print('You need to provide the name of a DSK file to begin.')
 		return 1
 
-	potracks = []
-	with open(dskfilename, mode="rb") as dskfile:
+	tracks = []
+	with open(dskfilename, mode="rb") as inputFile:
 		for track in range(35):
-			trackbuffer = dskfile.read(4096)
-			potracks.append(dsk2po(trackbuffer))
-	pofilename = re.sub('\.dsk$', '', dskfilename, flags=re.IGNORECASE) + ".po"
-	print('Writing po image to {}'.format(pofilename))
-	with open(pofilename, mode="wb") as pofile:
-		for potrack in potracks:
-			pofile.write(potrack)
+			trackbuffer = inputFile.read(4096)
+			tracks.append(dsk2po(trackbuffer))
+	if g_Reversed:
+		outfilename = re.sub('\.po$', '', dskfilename, flags=re.IGNORECASE) + ".dsk"
+		print('Writing dsk image to {}'.format(outfilename))
+	else:
+		outfilename = re.sub('\.dsk$', '', dskfilename, flags=re.IGNORECASE) + ".po"
+		print('Writing po image to {}'.format(outfilename))
+	with open(outfilename, mode="wb") as outfile:
+		for track in tracks:
+			outfile.write(track)
 	return 0
 
 # From Beneath Apple ProDOS, table 3.1
