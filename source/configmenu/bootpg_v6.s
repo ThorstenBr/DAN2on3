@@ -890,38 +890,38 @@ DELAY:
          JSR HOME          ; clear screen
 
 .IFNDEF NO_BOOT
+READBOOT:
+         LDA #$A0          ; set buffer address to $A000
+         STA BUFHI
+         LDA #$00          ; take care of lower byte
+         STA BUFLO
+         STA BLKHI
+         LDA #$01
+         STA BLKLO         ; load block number 1
+;         LDA #10           ; command=10: "failsafe load block" command
+         TAX               ; command=1: read block
+         STX COMMAND
+         JSR DANCOM        ; load block
+         BCS WAITRESET     ; failed to load
          LDA KBD_MOD       ; read modifier keys
          AND #$10          ; open-apple key pressed?
-         BNE WAITRESET     ; no, then just wait for reset
-         LDA KBD_MOD       ; read modifier keys again
-         AND #$02          ; also shift pressed?
-         BEQ :+            ; branch when not pressed
-         LDA #>(DEBUG_MONITOR-1) ; shift also pressed: load boot block, then enter monitor
-         PHA
-         LDA #<(DEBUG_MONITOR-1)
-         PHA
-         JMP READBOOT
-:        LDA #$9F          ; push return address $9FFF to the stack (incremenetd by RTS...
-         PHA               ; ... so actual entry address is $A000)
-         LDA #$FF
-         PHA               ; push lower return address
-READBOOT:
+         BNE CHKSOSID      ; no, continue bootstrapping
+         JMP DEBUG_MONITOR ; enter Apple /// monitor if open-apple key was pressed
+CHKSOSID:LDX #$06          ; compare 7 bytes (0-6) of the ID (SOSBOOT)
+:        LDA $A003,X       ; load byte
+         CMP SOSBOOT_ID,X  ; compare with bootloader ID
+         BNE WAITRESET     ; wait for reset if ID mismatches
+         DEX
+         BPL :-            ; check all bytes
+                           ; yay! volume can bootstrap from the DANII card!
          LDA LOWBT         ; copy device entry address to where SOS HD boot expects it...
          STA DENT
          LDA HIGHBT        ; ...also the high byte
          STA DENT+1
-         LDA #$A0          ; push return address $A000 to the stack
-         STA BUFHI         ; also store $A000 in BUF address
-         LDA #$00          ; take care of lower byte
-         STA BUFLO
-         STA BLKLO         ; always load block 0
-         STA BLKHI
-         TAX
-         STA (BUFLO,X)     ; write "BRK" to $A000, so if loading fails (volume does not exist, it breaks to monitor immediately)
-;         LDA #10           ; command=10: "failsafe load block" command
-         INX               ; command=1: read block
-         STX COMMAND
-         JMP (LOWBT)       ; jump, load boot sector and "return" to $A000
+         CLC
+         JMP $A000         ; go! go! go! Bootstrap!
+SOSBOOT_ID:.BYTE "SOSBOOT" ; identifier in the second boot block of SOSHDBOOT bootloaders, which can bootstrap from a ProDOS card
+DANCOM:  JMP (LOWBT)       ; jump, load boot sector (and return to caller)
 .ENDIF
 WAITRESET:
          LDA #10
