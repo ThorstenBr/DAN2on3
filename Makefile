@@ -24,5 +24,5 @@ bin:
 
 release:
 	- rm $(ZIP_FILE)
-	@zip $(ZIP_FILE) $(addprefix bin/,$(DISKS) $(DISKS:.dsk=.po) $(DRIVER))
+	@zip $(ZIP_FILE) readme.txt $(addprefix bin/,$(DISKS) $(DISKS:.dsk=.po) $(DRIVER))
 
