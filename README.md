@@ -41,8 +41,8 @@ Configuration is identical/similar as known from the Apple II:
 
 **Note:**
 
-* The menu now supports the flexible volume mapping, which is supported by newer firmware: volumes 1 + 2 may be selected from any of the 32 volumes (independently of the SD card).
-If, however, you are using a DANII controller card with older firmware, then you have to restrict to select volume 1 on SD card 1 and volume 2 on SD card 2 (the menu does not check your firmware version).
+* The menu now supports the flexible volume mapping, which is supported by newer firmware of the DAN][ controller (firmware >= [3.0.0](https://github.com/ThorstenBr/Apple2Card/releases)). Volumes 1 + 2 may be selected from any of the 32 volumes (independently of the SD card).
+* If, however, you are using a DANII controller card with earlier firmware, then you have to restrict to select volume 1 on SD card 1 and volume 2 on SD card 2 (the menu does not check your firmware version).
 * Apple III SOS volume images of up to 16MB (32767 * 512 bytes) are supported. With Apple II ProDOS up to 32MB (65535 * 512 bytes) may be used, however, the larger 32MB images are not properly handled by Apple III SOS (though the file system itself is identical between Apple II ProDOS and Apple /// SOS).
 
 
@@ -87,6 +87,7 @@ Support for formatting is currently not enabled. For now, you have to use prefor
 * Uses standard GNU makefiles usable for Linux and Windows WSL environment. Just run "make" in the root folder to build.
 * A Python3 interpreter is required.
 * The [ca65](https://github.com/cc65/cc65) 6502 assembler from  Ullrich von Bassewitz is required.
+* The [AppleCommander](https://github.com/AppleCommander/AppleCommander) utility to build disks is included - but requires the installation of a Java Runtime Environment.
 * A utility ([A3Driverutil](https://github.com/robjustice/a3driverutil)) by Robert Justice to manipulate Apple /// SOS.DRIVER files is included.
 
 A prebuilt driver and disks in various formats are available. See [releases](https://github.com/ThorstenBr/DAN2on3/releases).
