@@ -120,7 +120,7 @@ def readUnpack(file,bytes, **options):
     if options.get("type") == 't':
         SOS = file.read(bytes)
         text_unpacked = unpack('%ss' % bytes, SOS)
-        return ''.join(text_unpacked)
+        return b''.join(text_unpacked)
 
     if options.get("type") == 'b':
         SOS = file.read(bytes)
@@ -135,12 +135,12 @@ def readUnpack(file,bytes, **options):
 # this function reads a word from a string at the specified
 # offset and returns an integer 
 def readWord(data,startpos):
-    return ord(data[startpos+1])*256+ord(data[startpos])
+    return data[startpos+1]*256+data[startpos]
 
 # this function reads a byte from a string at the specified
 # offset and returns an integer
 def readByte(data,startpos):
-    return ord(data[startpos])
+    return data[startpos]
 
 #
 # this function reads in a o65 binary file of a driver and 
@@ -156,7 +156,7 @@ def convert_o65(file):
     byte = readUnpack(o65file,1,type = '1')        #non-C64 marker, 2 bytes
     byte = readUnpack(o65file,1,type = '1')
     o65 = readUnpack(o65file,3,type = 't')         # "o65" MAGIC number!
-    if o65 == 'o65':    #valid file, lets keep going
+    if o65 == b'o65':    #valid file, lets keep going
         version = readUnpack(o65file,1,type = '1')  # version
         mode = readUnpack(o65file,2,type = 'b')     # mode word
         tbase = readUnpack(o65file,2,type = 'b')    # address to which text is assembled to originally
@@ -189,7 +189,7 @@ def convert_o65(file):
            option_bytes = readUnpack(o65file,olen-2,type = 't')
            olen = readUnpack(o65file,1,type = '1') 
         
-        driver=''      #this will be the converted driver
+        driver=b''      #this will be the converted driver
         
         #add text segment
         driver += o65file.read(tlen)  #this is the comment part
@@ -229,7 +229,7 @@ def convert_o65(file):
                     reloctable.append(offset_address)
                     offset = readUnpack(o65file,1,type = '1')
                 else:
-                    print 'Error, only 16 bit word offsets allowed, ie no lda #<address or lda #>address'
+                    print('Error, only 16 bit word offsets allowed, ie no lda #<address or lda #>address')
                     o65file.close()
                     exit(1)
         
@@ -244,7 +244,7 @@ def convert_o65(file):
         return driver    #return the converted driver binary
     
     else:
-        print 'not o65 input file'
+        print('not o65 input file')
         o65file.close()
         exit(1)
     
@@ -258,8 +258,8 @@ def convert_o65(file):
 #
 def parsedriverfile(filecontents): 
     filetype = filecontents[0:8]           #check for 'SOS DRVR' header
-    if filetype != 'SOS DRVR':
-        print "INVALID SOS.DRIVER file"
+    if filetype != b'SOS DRVR':
+        print("INVALID SOS.DRIVER file")
         exit(1)
     
     drivers_list = []
@@ -292,7 +292,7 @@ def parseDIB(filedata,offset,dib):
     driver_details={}
     driver_details['dib_num'] = dib
     driver_details['name_len'] = readByte(filedata,offset+6)
-    driver_details['name'] = filedata[offset+7:offset+7+driver_details['name_len']]
+    driver_details['name'] = (filedata[offset+7:offset+7+driver_details['name_len']]).decode("ascii")
     driver_details['status'] = readByte(filedata,offset+22)
     driver_details['slot'] = readByte(filedata,offset+23)
     driver_details['unit'] = readByte(filedata,offset+24)
@@ -310,7 +310,7 @@ def getDriverName(driver):
     offset = readWord(driver, 0)          #comment length
     name_length = readByte(driver,offset + 8)  #extract the name length from the driver code
                                                #code starts after the comment
-    return driver[offset+9:offset+9+name_length]  #then grab the name
+    return (driver[offset+9:offset+9+name_length]).decode("ascii")  #then grab the name
 
 
 #
@@ -336,7 +336,7 @@ if args.command == 'bin':
     bin_file = args.binfile
     outfile = open(bin_file,'wb')
     outfile.write(driver)   
-    print 'File converted and written as raw binary file to:',bin_file
+    print('File converted and written as raw binary file to:',bin_file)
     outfile.close()
 
 # Convert file and output as SOS.DRIVER format
@@ -345,24 +345,24 @@ elif args.command == 'sos':
     driver = convert_o65(args.o65file)
 
     #create SOS driver header
-    header = 'SOS DRVR'
+    header = b'SOS DRVR'
     header += pack('<H',0x0522)  #header length
     header += pack('>H',0x0400)  #Number of Disk /// drives installed (4)
-    header += '??              ' #char set name, ?? indicates no char set included (16 chars long)
+    header += b'??              ' #char set name, ?? indicates no char set included (16 chars long)
     
     for i in range(0,0x400):     #pad out the char set with spaces   
-        header += ' '
+        header += b' '
     
-    header += '??              ' #keyboard layout name (16 chars long)
+    header += b'??              ' #keyboard layout name (16 chars long)
     
     for i in range(0,0x100):     #pad out with spaces   
-        header += ' '
+        header += b' '
     
     sos_file = args.sosfile
     outfile = open(sos_file,'wb')
     outfile.write(header + driver + pack('>H',0xFFFF))  #add the end marker   
     
-    print 'File converted and written as SOS.DRIVER binary file to:',sos_file
+    print('File converted and written as SOS.DRIVER binary file to:',sos_file)
     outfile.close()
 
 #Convert and add to an existing SOS.DRIVER file
@@ -391,17 +391,20 @@ elif args.command == 'add':
     if i == -1:
         #not found, lets add
         trimmed_sosdriver = sosdriverfile[0:driver_end]  #trim of the 0xFFFF end marker
-        newsosdriverfile = trimmed_sosdriver + driver + chr(0xFF) + chr(0xFF)
+        if type(trimmed_sosdriver[0])==type(1):
+            newsosdriverfile = trimmed_sosdriver + driver + bytes([0xFF,0xFF])
+        else:
+            newsosdriverfile = trimmed_sosdriver + driver + chr(0xFF) + chr(0xFF)
         
         sosdriver = open(sos_file,'wb')      #write it back out, overwriting the old one
         sosdriver.write(newsosdriverfile)      
         sosdriver.close()   
         
-        print 'Driver: ' + driver_name + ' added to ' + sos_file
+        print('Driver:', driver_name, 'added to', sos_file)
 
     else:
         #found, report error
-        print 'Driver: ' + driver_name + ' elready exists in ' + sos_file + ', not added'
+        print('Driver:', driver_name, 'already exists in', sos_file, ', not added')
         exit(1)
 
 #List drivers in a SOS.DRIVER file
@@ -423,7 +426,7 @@ elif args.command == 'list':
             driver_details.append(parseDIB(filedata,offset+nextdib,dib))
             nextdib = readWord(filedata,offset+nextdib+2) #next dib of this driver
     
-    print    'DriverName        Status     Slot   Unit   Manid  Release'     
+    print(   'DriverName        Status     Slot   Unit   Manid  Release')
     for i in range(0,len(driver_details)):
         #decode status byte
         if driver_details[i]['status'] & 0x80 == 0x80:
@@ -437,11 +440,11 @@ elif args.command == 'list':
             slot = driver_details[i]['slot']
         
         if driver_details[i]['dib_num'] == 0:  #don't indent the first DIB
-            print '{:16}  {:10} {:3}     {:02X}     {:04X}   {:04X}'.format(driver_details[i]['name'], status, slot, driver_details[i]['unit'],driver_details[i]['manid'],driver_details[i]['release'])
+            print('{:16}  {:10} {:3}     {:02X}     {:04X}   {:04X}'.format(driver_details[i]['name'], status, slot, driver_details[i]['unit'],driver_details[i]['manid'],driver_details[i]['release']))
         else:         #otherwise indent the rest, ie sub devices
-            print '  {:16}{:10} {:3}     {:02X}     {:04X}   {:04X}'.format(driver_details[i]['name'], status, slot, driver_details[i]['unit'],driver_details[i]['manid'],driver_details[i]['release'])
+            print('  {:16}{:10} {:3}     {:02X}     {:04X}   {:04X}'.format(driver_details[i]['name'], status, slot, driver_details[i]['unit'],driver_details[i]['manid'],driver_details[i]['release']))
 
-    print '\n Total size: ',len(filedata)
+    print('\n Total size: ',len(filedata))
 
 
 #Convert and update an existing driver in a SOS.DRIVER file
@@ -450,7 +453,7 @@ elif args.command == 'update':
     
     driver_name = getDriverName(driver)  #extract the driver name from the driver    
     
-    print 'Driver in o65 file: ',driver_name
+    print('Driver in o65 file:',driver_name)
     
     sos_file = args.sosfile              #read in the existing SOS.DRIVER file
     sosdriver = open(sos_file,'rb')
@@ -470,8 +473,8 @@ elif args.command == 'update':
     
     if i != -1:
         #found it
-        print 'Driver found in SOS.DRIVER, updating..'
-        #print drivers_list
+        print('Driver found in SOS.DRIVER, updating..')
+        #print(drivers_list)
         
         newsosdriverfile = sosdriverfile[0:drivers_list[i]['comment_start']]    #part up to target driver
         newsosdriverfile += driver  #add the updated driver
@@ -485,11 +488,11 @@ elif args.command == 'update':
         sosdriver.write(newsosdriverfile)
         sosdriver.close()
         
-        print 'Driver: ' + driver_name + ' updated!'
+        print('Driver:', driver_name, 'updated!')
 
     else:
         #not found
-        print 'Driver: ' + driver_name + ' not found in SOS.DRIVER file'
+        print('Driver:', driver_name, 'not found in SOS.DRIVER file')
         exit(1)
 
 
@@ -515,7 +518,7 @@ elif args.command == 'delete':
     
     if i != -1:
         #found it
-        print 'Driver found in SOS.DRIVER, deleting..'
+        print('Driver found in SOS.DRIVER, deleting..')
         
         newsosdriverfile = sosdriverfile[0:drivers_list[i]['comment_start']]    #part up to target driver
         
@@ -528,11 +531,11 @@ elif args.command == 'delete':
         sosdriver.write(newsosdriverfile)
         sosdriver.close()
         
-        print 'Driver: ' + driver_name + ' deleted!'
+        print('Driver:', driver_name, 'deleted!')
 
     else:
         #not found
-        print 'Driver: ' + driver_name + ' not found in SOS.DRIVER file'
+        print('Driver:', driver_name, 'not found in SOS.DRIVER file')
         exit(1)
 
 
@@ -557,7 +560,7 @@ elif args.command == 'extract':
    
    if i != -1:
       #found it
-      print 'Driver found in SOS.DRIVER, extracting..'
+      print('Driver found in SOS.DRIVER, extracting..')
       
       if i < len(drivers_list)-1:   #check if its not the last one in sos.driver
          extracted_driver = sosdriverfile[drivers_list[i]['comment_start']:drivers_list[i+1]['comment_start']]
@@ -570,11 +573,11 @@ elif args.command == 'extract':
       driverfile.write(extracted_driver)
       driverfile.close()
 
-      print 'Driver: ' + driver_name + ' extracted and written to file: ' + filename
+      print('Driver:', driver_name, 'extracted and written to file:', filename)
 
    else:
       #not found
-      print 'Driver: ' + driver_name + ' not found in SOS.DRIVER file'
+      print('Driver:', driver_name, 'not found in SOS.DRIVER file')
       exit(1)
 
 #Extract a drivers code from a SOS.DRIVER file and relocate to 0x2000 to aid disassembly
@@ -600,7 +603,7 @@ elif args.command == 'extractcode':
    
    if i != -1:
       #found it
-      print 'Driver found in SOS.DRIVER, extracting code..'
+      print('Driver found in SOS.DRIVER, extracting code..')
       
       #grab the code
       extracted_driver_code = sosdriverfile[drivers_list[i]['code_start']+2:drivers_list[i]['reloc_start']] #skip the code length(+2)
@@ -610,7 +613,7 @@ elif args.command == 'extractcode':
          extracted_driver_reloc = sosdriverfile[drivers_list[i]['reloc_start']+2:drivers_list[i+1]['comment_start']] #skip the reloc length(+2)
       else:      #must be the last one, so we use the offset of the 0xFFFF marker
          extracted_driver_reloc = sosdriverfile[drivers_list[i]['reloc_start']+2:drivers_end]  #skip the reloc length(+2)
-      #print  extracted_driver_reloc.encode('hex')
+      #print( extracted_driver_reloc.encode('hex'))
       
       #convert the reloc table from little endian addresses to list of integers 
       offset_table = []
@@ -632,9 +635,9 @@ elif args.command == 'extractcode':
       driverfile.write(extracted_driver_code)
       driverfile.close()
 
-      print 'Driver: ' + driver_name + ' extracted, relocated and written to file: ' + filename
+      print('Driver:', driver_name, 'extracted, relocated and written to file:', filename)
 
    else:
       #not found
-      print 'Driver: ' + driver_name + ' not found in SOS.DRIVER file'
+      print('Driver:', driver_name, 'not found in SOS.DRIVER file')
       exit(1)
