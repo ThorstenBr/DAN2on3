@@ -3,10 +3,11 @@
 
 include version.mk
 
-ZIP_FILE := DAN2on3_v$(CONFIG_VERSION).zip
-
-DISKS  := Apple3SOS.DAN2on3.Config.dsk  Apple3SOS.DAN2on3.SysUtils.dsk
-DRIVER := DAN2ON3.DRIVER
+ZIP_FILE    := DAN2on3_v$(CONFIG_VERSION).zip
+DISKS       := Apple3Disk.DAN2on3.Config.dsk \
+               Apple3Disk.DAN2on3.SOSSysUtils.dsk
+A3_BOOTMENU := VOLA3_APPLEIII_BOOT_MENU.po
+DRIVER      := DAN2ON3.DRIVER
 
 .SILENT: all clean bin
 
@@ -23,6 +24,6 @@ bin:
 	- mkdir $@
 
 release:
-	- rm $(ZIP_FILE)
-	@zip $(ZIP_FILE) readme.txt $(addprefix bin/,$(DISKS) $(DISKS:.dsk=.po) $(DRIVER))
+	- rm -f $(ZIP_FILE)
+	@zip $(ZIP_FILE) readme.txt $(addprefix bin/,$(DISKS) $(DISKS:.dsk=.po) $(A3_BOOTMENU) $(DRIVER))
 

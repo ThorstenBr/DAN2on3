@@ -12,7 +12,7 @@ SOURCE_DISK := ../disk/Apple3SOS1.3SysUtils.dsk
 # temporary disk file
 TEMP_DISK   := bin/_Apple3SOS.SysUtils.dsk
 # Final System Utilities disk with new driver (output)
-OUTPUT_DISK := bin/Apple3SOS.DAN2on3.SysUtils.dsk
+OUTPUT_DISK := bin/Apple3Disk.DAN2on3.SOSSysUtils.dsk
 
 # Build Utilities
 DSK2PO    := python3 ../../tools/dsk2po/dsk2po.py

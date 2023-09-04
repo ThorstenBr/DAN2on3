@@ -24,7 +24,7 @@
 ;FILE_DEBUG = 1
 
 ; enable to build disk drive bootloader
-DISK_BOOTLOADER = 1
+;DISK_BOOTLOADER = 1
 
 ; enable to build bootloader loading from DAN II card
 ;DANII_BOOTLOADER = 1
@@ -108,16 +108,13 @@ START:
          TXS
          JSR HOME                       ; init screen
          STA KBD_STROBE                 ; clear pending keypress
-
+         JSR LOAD_ALL_BLOCKS            ; load remaining blocks
 .IFDEF DISK_BOOTLOADER
-         JSR LOAD_ALL_BLOCKS            ; disk bootloader (ROM destroys zeropage at UNIT, so we load disk blocks first)
          JSR DAN2FindCard               ; find DAN II card
-.ELSE
-         JSR DAN2FindCard               ; find DAN II card
-         JSR LOAD_ALL_BLOCKS            ; DAN II bootloader: card must be found _before_ we can load the blocks
 .ENDIF
          JMP MAIN
 
+.IFDEF DISK_BOOTLOADER
           ; find DANII card in any slot
 DAN2FindCard:                     ; let's find the card in any slot
           LDA #$C1                ; start with slot 1
@@ -172,6 +169,7 @@ DAN2CardId:
 
 NOSLOT_MSG:ASCHI "MISSING DANII CARD!"
            .BYTE 0
+.ENDIF
 
 LOAD_ALL_BLOCKS:                         ; load remaining blocks of bootloader
 
@@ -212,32 +210,63 @@ LOADOK:
          STA BLKHI       ; block $0000
          STA BLKLO
 .ENDIF
-
 .IFDEF DANII_BOOTLOADER
          ; Load additional bootloader blocks from DAN II card: the ROM routine only loaded the first block/512 byte.
          ; Since the first 512byte we were just loaded by the ROM:
          ; - BLK is still set to $0000 and BUF is set to $A000
          ; - command is still set to the "load bootloader" command
          ; So we just need to update the address/block numbers...
-         LDA #(BLOCK_COUNT-1); number of remaining blocks
+
+         ; set up the jump instruction
+         LDA #$20             ; store JSR at $F0
+         STA INSTRUC
+         LDA #$60             ; store RTS at $F3
+         STA RTSBYT
+         LDA DENT             ; copy ROM setting's card address
+         STA LOWBT            ; place at low byte
+         LDA DENT+1
+         STA HIGHBT
+
+         LDA #(BLOCK_COUNT-1) ; number of remaining blocks
          STA SCRATCH
 LOADBLOCKS:
-         INC BLKLO       ; next block number
-         INC BUFHI       ; advance buffer address by $0200
+         INC BLKLO            ; next block number
+         INC BUFHI            ; advance buffer address by $0200
          INC BUFHI
-         JSR INSTRUC     ; load the block
-         BCC LOADOK      ; success?
-         JSR BELL        ; oh no, we're doomed!
-         JMP SLOOP       ; try another boot device
+         JSR INSTRUC          ; load the block
+         BCC LOADOK           ; success?
+         BIT BEEPER           ; just ring the bell
+EXIT:    JMP EXIT
 LOADOK:
-         DEC SCRATCH     ; number of remaining blocks
-         BNE LOADBLOCKS  ; load remaining blocks
+         DEC SCRATCH          ; number of remaining blocks
+         BNE LOADBLOCKS       ; load remaining blocks
 .ENDIF
          RTS
 
 MAIN:                         ; main
          LDA $C051            ; GR/TEXT=1 to enable color
-         JSR SHOW_TITLE       ; show header/footer lines
+
+.IFDEF DANII_BOOTLOADER
+         ; show "DANII: press RETURN" message and wait
+         LDX #DANBOOTMSG-MSGS
+         LDA #22
+         JSR GOTOROW          ; go to line 22
+         JSR DISPMSG          ; show boot message
+         LDY #$FF             ; load delay value
+WAITKEY:
+         LDA #$60             ; wait a little
+         JSR WAITLOOP         ; do the wait
+         LDA KBD_KEY          ; do we have a key
+         BMI BOOTKEY          ; keypress?
+         DEY                  ; calculate timeout
+         BNE WAITKEY
+BOOTSTRP:JMP READBOOT         ; no key pressed: boot with recent volume configuration
+BOOTKEY: STA KBD_STROBE       ; clear pending keypress
+         CMP #13+128          ; RETURN key?
+         BNE BOOTSTRP
+.ENDIF
+
+CFGMENU: JSR SHOW_TITLE       ; show header/footer lines
          JSR SHOWSD
          JSR DAN_GETVOL       ; get volume numbers
          JSR DISPCUR          ; show current volume numbers
@@ -601,7 +630,7 @@ SDMSG:   ASCHI   "SD1:"
         .BYTE 0
 
 A2FOREVER:
-         ASCINV  "  APPLE III FOREVER!  V"
+         ASCINV  "  APPLE /// FOREVER!  V"
          .BYTE '0'+VER_MAJOR
          ASCINV "."
          .BYTE '0'+VER_MINOR
@@ -624,6 +653,10 @@ NEWIPMSG:ASCHI "NEW IP:    .   .   .   "
        .BYTE 0
 REBOOTMSG:ASCHI "INSERT BOOTDISK - PRESS RESET"
        .BYTE 0
+.IFDEF DANII_BOOTLOADER
+DANBOOTMSG:ASCHI "DAN2ON3: PRESS RETURN"
+       .BYTE 0
+.ENDIF
 
 GOTOROW:
          STA CV            ; set row
@@ -887,10 +920,9 @@ DELAY:
          JSR WAITLOOP
          DEX
          BNE DELAY
-         JSR HOME          ; clear screen
 
+READBOOT:JSR HOME          ; clear screen
 .IFNDEF NO_BOOT
-READBOOT:
          LDA #$A0          ; set buffer address to $A000
          STA BUFHI
          LDA #$00          ; take care of lower byte
@@ -982,3 +1014,9 @@ DECDONE:
          RTS
 
 BOOT_END:
+.IFDEF DANII_BOOTLOADER
+ PADDING_START = *
+ .REPEAT $A600-PADDING_START
+ .BYTE $FF
+ .ENDREP
+.ENDIF
