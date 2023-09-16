@@ -19,7 +19,7 @@ DAN_BIN_FILE   := $(addprefix bin/,$(addprefix VOLA3_,$(ASM_FILE:.s=.bin)))
 BIN_FILES      := $(DISK_BIN_FILE) $(DAN_BIN_FILE)
 
 # Output disk file
-OUTPUT_DISK    := bin/Apple3Disk.DAN2on3.Config.po
+OUTPUT_DISK    := bin/Apple3Disk.DAN2on3.Boot.po
 
 # Temporary disk file
 TEMP_DISK      := bin/temp.po

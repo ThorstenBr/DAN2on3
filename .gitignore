@@ -4,6 +4,7 @@ info
 bin/*
 source/driver/bin/*
 source/configmenu/bin/*
+source/rom/bin/*
 OLD
 BACKUP
 blog

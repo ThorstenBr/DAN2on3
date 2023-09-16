@@ -35,10 +35,12 @@ $(ROM_FILE4K): $(OBJ_FILES)
 	$(ECHO) "$(LOG_PREFIX) Linking $@"
 	ld65 -tnone $(OBJ_FILES) -o $@_
 	$(A3ROMPATCHER) --patch $@_ 0xF6E5
+	cp $@_ ../../bin/$(notdir $@)
 	mv $@_ $@
 
 $(ROM_FILE8K): $(ROM_FILE4K)
 	$(A3ROMPATCHER) --4to8k $< $@
+	cp $@ ../../bin/$(notdir $@)
 
 $(ROM_FILE4K:.bin=.dump): $(ROM_FILE4K)
 	hexdump -C $(ROM_FILE4K) > $@
