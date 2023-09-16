@@ -8,7 +8,7 @@ Current file: monitor.s
 000000r 1               ;*********************************************************
 000000r 1               
 000000r 1                          .setcpu "6502"
-000000r 1               		   .segment "CODE"
+000000r 1                          .segment "CODE"
 000000r 1               
 000000r 1               ;           .PROC   MONITOR
 000000r 1                          .ORG    $F7FE
@@ -308,7 +308,7 @@ Current file: monitor.s
 00F98E  1  E6 7A        NXTA4:     INC     A4L          ; BUMP 16 BIT POINTERS
 00F990  1  D0 02                   BNE     NXTA1
 00F992  1  E6 7B                   INC     A4H
-00F994  1  E6 74        NXTA1:     INC	   A1L          ; BUMP AL
+00F994  1  E6 74        NXTA1:     INC     A1L          ; BUMP AL
 00F996  1  D0 05                   BNE     TSTA1
 00F998  1  E6 75                   INC     A1H
 00F99A  1  38                      SEC                  ; IN CASE OF ROLL OVER
@@ -499,7 +499,7 @@ Current file: monitor.s
 00FAD6  1  2C                      .BYTE   $2C          ; DUMMY BIT TO SKIP 2 BYTES
 00FAD7  1  A9 02        WRTE:      LDA     #02          ; SET DISK COMMAND TO WRITE
 00FAD9  1  85 87        SAVCMD:    STA     IBCMD
-00FADB  1  A5 74        RWLOOP:    LDA	   A1L
+00FADB  1  A5 74        RWLOOP:    LDA     A1L
 00FADD  1  85 85                   STA     IBBUFP       ; COMMAND FORMAT IS
 00FADF  1  A5 75                   LDA     A1H          ; BLOCKNUMBER <ADDRESS END ADDRESS
 00FAE1  1  85 86                   STA     IBBUFP+1
@@ -520,14 +520,14 @@ Current file: monitor.s
 00FAFD  1  A5 75        DUMP8:     LDA     A1H
 00FAFF  1  85 77                   STA     A2H
 00FB01  1  20 CB F9                JSR     TST80WID     ; GET WIDTH MASK INTO ACC
-00FB04  1  05 74                   ORA	   A1L
+00FB04  1  05 74                   ORA     A1L
 00FB06  1  85 76                   STA     A2L
 00FB08  1  D0 06                   BNE     DUMP0        ; BRANCH ALWAYS
 00FB0A  1               ;
 00FB0A  1  4A           TSTDUMP:   LSR     A            ; DUMP?
 00FB0B  1  B0 95        ERROR1:    BCS     ERROR
 00FB0D  1  20 CB F9     DUMP:      JSR     TST80WID     ; SET FOR EITHER 80 OR 40 COLUMNS
-00FB10  1  A5 74        DUMP0:     LDA	   A1L
+00FB10  1  A5 74        DUMP0:     LDA     A1L
 00FB12  1  85 7A                   STA     A4L
 00FB14  1  A5 75                   LDA     A1H
 00FB16  1  85 7B                   STA     A4H
@@ -536,7 +536,7 @@ Current file: monitor.s
 00FB1D  1  20 75 FA     DUMP1:     JSR     PRINTA1      ; PRINT ADDRESS AND FIRST BYTE
 00FB20  1  20 94 F9     DUMP2:     JSR     NXTA1
 00FB23  1  B0 10                   BCS     DUMPASC      ; END WITH ASCII
-00FB25  1  A5 74                   LDA	   A1L		; TEST END OF LINE
+00FB25  1  A5 74                   LDA     A1L          ; TEST END OF LINE
 00FB27  1  25 69                   AND     MASK         ; FOR 40/80 COLUMN
 00FB29  1  D0 05                   BNE     DUMP3
 00FB2B  1  20 35 FB                JSR     DUMPASC
@@ -545,7 +545,7 @@ Current file: monitor.s
 00FB33  1  D0 EB                   BNE     DUMP2        ; ALWAYS (ACC JUST PULLED AS $A0)
 00FB35  1               ;
 00FB35  1  A5 7A        DUMPASC:   LDA     A4L          ; RESET TO BEGINNING OF LINE
-00FB37  1  85 74                   STA	   A1L
+00FB37  1  85 74                   STA     A1L
 00FB39  1  A5 7B                   LDA     A4H
 00FB3B  1  85 75                   STA     A1H
 00FB3D  1  20 87 FA                JSR     PRSPC        ; PRINT AN EXTRA SPACE
@@ -624,7 +624,7 @@ Current file: monitor.s
 00FBC2  1  38           CURUP1:    SEC                  ; DECREMENT BY ONE
 00FBC3  1  E9 01                   SBC     #01
 00FBC5  1  85 5D        SETCV:     STA     CV           ; SAVE NEW VERTICAL LINE
-00FBC7  1               BASCALC    =	   *
+00FBC7  1               BASCALC    =       *
 00FBC7  1               CURDN1     =       *
 00FBC7  1  A5 5D                   LDA     CV           ; GET VALUES FOR FIRST PAGE ($400)
 00FBC9  1  10 4E                   BPL     BASCALC1     ; ALWAYS
@@ -784,7 +784,7 @@ Current file: monitor.s
 00FCCD  1  A9 DC        CANCEL:    LDA     #$DC         ; OUTPUT BACKSLASH
 00FCCF  1  20 39 FC                JSR     COUT
 00FCD2  1  20 EF FC                JSR     CROUT
-00FCD5  1               GETLNZ     =	   *
+00FCD5  1               GETLNZ     =       *
 00FCD5  1  A5 6B        GETLN:     LDA     PROMPT
 00FCD7  1  20 39 FC                JSR     COUT
 00FCDA  1  A0 01                   LDY     #01
@@ -797,7 +797,7 @@ Current file: monitor.s
 00FCE9  1  91 7E                   STA     (INBUF),Y
 00FCEB  1  C9 8D                   CMP     #$8D
 00FCED  1  D0 C9                   BNE     NOTCR
-00FCEF  1               CROUT      =	   *
+00FCEF  1               CROUT      =       *
 00FCEF  1  2C 00 C0                BIT     KBD          ; TEST FOR START/STOP
 00FCF2  1  10 13                   BPL     NOSTOP
 00FCF4  1  20 2E FD                JSR     KEYIN3       ; READ KBD
@@ -1129,7 +1129,7 @@ Current file: monitor.s
 00FFC0  1               ;          341-0031-01
 00FFC0  1               ;          "(C) COPYRIGHT JULY, 1980 APPLE COMPUTER INC. JRH"
 00FFC0  1               ;
-00FFC0  1  A8 C3 A9 A0  		   .BYTE   $A8,$C3,$A9,$A0,$C3,$CF,$D0,$D9,$D2,$C9,$C7,$C8,$D4,$A0,$CA,$D5
+00FFC0  1  A8 C3 A9 A0             .BYTE   $A8,$C3,$A9,$A0,$C3,$CF,$D0,$D9,$D2,$C9,$C7,$C8,$D4,$A0,$CA,$D5
 00FFC4  1  C3 CF D0 D9  
 00FFC8  1  D2 C9 C7 C8  
 00FFD0  1  CC D9 AC A0             .BYTE   $CC,$D9,$AC,$A0,$B1,$B9,$B8,$B0,$A0,$C1,$D0,$D0,$CC,$C5,$A0,$C3

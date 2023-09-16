@@ -4,8 +4,8 @@
 ;*********************************************************
 
            .setcpu "6502"
-		   .segment "CODE"
-		   
+           .segment "CODE"
+
 ;           .PROC   MONITOR
            .ORG    $F7FE
 ;
@@ -304,7 +304,7 @@ CMDVEC     =    *
 NXTA4:     INC     A4L          ; BUMP 16 BIT POINTERS
            BNE     NXTA1
            INC     A4H
-NXTA1:     INC	   A1L          ; BUMP AL
+NXTA1:     INC     A1L          ; BUMP AL
            BNE     TSTA1      
            INC     A1H
            SEC                  ; IN CASE OF ROLL OVER
@@ -495,7 +495,7 @@ READ:      LDA     #01          ; GET DISK COMMAND TO READ
            .BYTE   $2C          ; DUMMY BIT TO SKIP 2 BYTES
 WRTE:      LDA     #02          ; SET DISK COMMAND TO WRITE
 SAVCMD:    STA     IBCMD
-RWLOOP:    LDA	   A1L
+RWLOOP:    LDA     A1L
            STA     IBBUFP       ; COMMAND FORMAT IS
            LDA     A1H          ; BLOCKNUMBER <ADDRESS END ADDRESS
            STA     IBBUFP+1
@@ -516,14 +516,14 @@ NOVER:     INC     A1H          ; BUMP RAM ADDRESS BY 512 BYTES
 DUMP8:     LDA     A1H
            STA     A2H
            JSR     TST80WID     ; GET WIDTH MASK INTO ACC
-           ORA	   A1L
+           ORA     A1L
            STA     A2L
            BNE     DUMP0        ; BRANCH ALWAYS
 ;
 TSTDUMP:   LSR     A            ; DUMP?
 ERROR1:    BCS     ERROR
 DUMP:      JSR     TST80WID     ; SET FOR EITHER 80 OR 40 COLUMNS
-DUMP0:     LDA	   A1L
+DUMP0:     LDA     A1L
            STA     A4L
            LDA     A1H
            STA     A4H
@@ -532,7 +532,7 @@ DUMP0:     LDA	   A1L
 DUMP1:     JSR     PRINTA1      ; PRINT ADDRESS AND FIRST BYTE
 DUMP2:     JSR     NXTA1
            BCS     DUMPASC      ; END WITH ASCII
-           LDA	   A1L		; TEST END OF LINE
+           LDA     A1L          ; TEST END OF LINE
            AND     MASK         ; FOR 40/80 COLUMN
            BNE     DUMP3
            JSR     DUMPASC
@@ -541,7 +541,7 @@ DUMP3:     JSR     PRA1BYTE     ; GO PRINT NEXT BYTE AND A SPACE
            BNE     DUMP2        ; ALWAYS (ACC JUST PULLED AS $A0)
 ;
 DUMPASC:   LDA     A4L          ; RESET TO BEGINNING OF LINE
-           STA	   A1L
+           STA     A1L
            LDA     A4H
            STA     A1H
            JSR     PRSPC        ; PRINT AN EXTRA SPACE
@@ -620,7 +620,7 @@ CURUP:     LDA     CV           ; TEST FOR TOP OF SCREEN
 CURUP1:    SEC                  ; DECREMENT BY ONE
            SBC     #01
 SETCV:     STA     CV           ; SAVE NEW VERTICAL LINE
-BASCALC    =	   *
+BASCALC    =       *
 CURDN1     =       *
            LDA     CV           ; GET VALUES FOR FIRST PAGE ($400)
            BPL     BASCALC1     ; ALWAYS
@@ -780,7 +780,7 @@ NOTCR:     LDA     (INBUF),Y    ; ECHO CHARACTER
 CANCEL:    LDA     #$DC         ; OUTPUT BACKSLASH
            JSR     COUT
            JSR     CROUT
-GETLNZ     =	   *
+GETLNZ     =       *
 GETLN:     LDA     PROMPT
            JSR     COUT
            LDY     #01
@@ -793,7 +793,7 @@ NXTCHAR:   JSR     RDCHAR       ; GET INPUT
            STA     (INBUF),Y
            CMP     #$8D
            BNE     NOTCR
-CROUT      =	   *
+CROUT      =       *
            BIT     KBD          ; TEST FOR START/STOP
            BPL     NOSTOP
            JSR     KEYIN3       ; READ KBD
@@ -1099,7 +1099,7 @@ NMIRQ:     JMP     RECON        ; IN DIAGNOSTICS
 ;          341-0031-01
 ;          "(C) COPYRIGHT JULY, 1980 APPLE COMPUTER INC. JRH"          
 ;
-		   .BYTE   $A8,$C3,$A9,$A0,$C3,$CF,$D0,$D9,$D2,$C9,$C7,$C8,$D4,$A0,$CA,$D5
+           .BYTE   $A8,$C3,$A9,$A0,$C3,$CF,$D0,$D9,$D2,$C9,$C7,$C8,$D4,$A0,$CA,$D5
            .BYTE   $CC,$D9,$AC,$A0,$B1,$B9,$B8,$B0,$A0,$C1,$D0,$D0,$CC,$C5,$A0,$C3
            .BYTE   $CF,$CD,$D0,$D5,$D4,$C5,$D2,$A0,$C9,$CE,$C3,$AE,$A0,$CA,$D2,$C8
 ;

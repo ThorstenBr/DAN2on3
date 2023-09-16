@@ -4,8 +4,8 @@
 ;*********************************************************
 
            .setcpu "6502"
-		   .segment "CODE"
-		   
+           .segment "CODE"
+
 ;           .PROC   DISKIO
            .ORG    $F000
 
@@ -283,7 +283,7 @@ RDRIGHT:   LDY     TRACK        ; ON THE RIGHT TRACK?
            BCC     TRYADR2
 RTTRK:     LDA     VOLUME       ; GET ACTUAL VOLUME HERE
            STA     IBSMOD       ; TELL OPSYS WHAT VOLUME WAS THERE
-CORRECTVOL: LDA     SECT         ; CHECK IF THIS IS THE RIGHT SECTOR
+CORRECTVOL:LDA     SECT         ; CHECK IF THIS IS THE RIGHT SECTOR
            CMP     IBSECT
 TRYAGAIN:  BNE     TRYADR2      ; NO, TRY ANOTHER SECTOR
            LDA     IBCMD        ; READ OR WRITE?
@@ -392,7 +392,7 @@ DRVINDX:   PHA                  ; PRESERVE ACC.
 ;                        *
 ;  FIRST READS NBUF2     *
 ;          HIGH TO LOW,  *
-;  THEN READS NBUF1	     *
+;  THEN READS NBUF1      *
 ;          LOW TO HIGH.  *
 ;                        *
 ;   ---- ON ENTRY ----   *
@@ -488,53 +488,53 @@ RDERR:     SEC
            RTS
 
 ;***************************
-;			   *
+;                          *
 ;     READ ADDRESS FIELD   *
-;         SUBROUTINE	   *
-;    (16-SECTOR FORMAT)	   *
-;			               *
+;         SUBROUTINE       *
+;    (16-SECTOR FORMAT)    *
+;                          *
 ;***************************
-;			               *
+;                          *
 ;    READS VOLUME, TRACK   *
-;        AND SECTOR	       *
-;			               *
-;   ---- ON ENTRY ----	   *
+;        AND SECTOR        *
+;                          *
+;   ---- ON ENTRY ----     *
 ;                          *
 ;  XREG: SLOTNUM TIMES $10 *
-;			               *
+;                          *
 ;  READ MODE  (Q6L, Q7L)   *
-;			               *
-;   ---- ON EXIT ----	   *
-;			               *
-;  CARRY SET IF ERROR	   *
-;			               *
-;  IF NO ERROR:		       *
-;    A-REG HOLDS $AA.	   *
-;    Y-REG HOLDS $00.	   *
-;    X-REG UNCHANGED.	   *
-;    CARRY CLEAR.	       *
-;			               *
+;                          *
+;   ---- ON EXIT ----      *
+;                          *
+;  CARRY SET IF ERROR      *
+;                          *
+;  IF NO ERROR:            *
+;    A-REG HOLDS $AA.      *
+;    Y-REG HOLDS $00.      *
+;    X-REG UNCHANGED.      *
+;    CARRY CLEAR.          *
+;                          *
 ;    CSSTV HOLDS CHKSUM,   *
 ;      SECTOR, TRACK, AND  *
-;      VOLUME READ.	       *
-;			               *
-;    USES TEMPS COUNT,	   *
-;      LAST, CSUM, AND	   *
+;      VOLUME READ.        *
+;                          *
+;    USES TEMPS COUNT,     *
+;      LAST, CSUM, AND     *
 ;      4 BYTES AT CSSTV.   *
-;			               *
+;                          *
 ;   ---- EXPECTS ----      *
-;			               *
-;   ORIGINAL 10-SECTOR	   *
-;  NORMAL DENSITY NIBLS	   *
-;			               *
-;   (4-BIT), ODD BITS,	   *
-;   THEN EVEN		       *
-;			               *
+;                          *
+;   ORIGINAL 10-SECTOR     *
+;  NORMAL DENSITY NIBLS    *
+;                          *
+;   (4-BIT), ODD BITS,     *
+;   THEN EVEN              *
+;                          *
 ;    ---- CAUTION ----     *
-;			               *
-;         OBSERVE	       *
-;     'NO PAGE CROSS'	   *
-;       WARNINGS ON	       *
+;                          *
+;         OBSERVE          *
+;     'NO PAGE CROSS'      *
+;       WARNINGS ON        *
 ;     SOME BRANCHES!!      *
 ;                          *
 ;    ---- ASSUMES ----     *
@@ -625,9 +625,9 @@ WEXIT:     RTS                  ; NORMAL READ EXITS.
 ;    X-REG UNCHANGED.  *
 ;    Y-REG HOLDS $00.  *
 ;    CARRY CLEAR.      *
-;		               *
+;                      *
 ;  ---- ASSUMES ----   *
-;		               *
+;                      *
 ;  1 USEC CYCLE TIME   *
 ;                      *
 ;***********************
@@ -724,7 +724,7 @@ TEN:       DEC     $8F
 ;   7-BIT NIBL WRITE SUBRS  *
 ;                           *
 ;   A-REG OR'D PRIOR EXIT   *
-;       CARRY CLEARED	    *
+;       CARRY CLEARED       *
 ;                           *
 ;****************************
 ;

@@ -8,7 +8,7 @@ Current file: diskio.s
 000000r 1               ;*********************************************************
 000000r 1               
 000000r 1                          .setcpu "6502"
-000000r 1               		   .segment "CODE"
+000000r 1                          .segment "CODE"
 000000r 1               
 000000r 1               ;           .PROC   DISKIO
 000000r 1                          .ORG    $F000
@@ -287,7 +287,7 @@ Current file: diskio.s
 00F0BE  1  90 CA                   BCC     TRYADR2
 00F0C0  1  A5 9A        RTTRK:     LDA     VOLUME       ; GET ACTUAL VOLUME HERE
 00F0C2  1  85 89                   STA     IBSMOD       ; TELL OPSYS WHAT VOLUME WAS THERE
-00F0C4  1  A5 98        CORRECTVOL: LDA     SECT         ; CHECK IF THIS IS THE RIGHT SECTOR
+00F0C4  1  A5 98        CORRECTVOL:LDA     SECT         ; CHECK IF THIS IS THE RIGHT SECTOR
 00F0C6  1  C5 84                   CMP     IBSECT
 00F0C8  1  D0 C0        TRYAGAIN:  BNE     TRYADR2      ; NO, TRY ANOTHER SECTOR
 00F0CA  1  A5 87                   LDA     IBCMD        ; READ OR WRITE?
@@ -396,7 +396,7 @@ Current file: diskio.s
 00F148  1               ;                        *
 00F148  1               ;  FIRST READS NBUF2     *
 00F148  1               ;          HIGH TO LOW,  *
-00F148  1               ;  THEN READS NBUF1	     *
+00F148  1               ;  THEN READS NBUF1      *
 00F148  1               ;          LOW TO HIGH.  *
 00F148  1               ;                        *
 00F148  1               ;   ---- ON ENTRY ----   *
@@ -492,53 +492,53 @@ Current file: diskio.s
 00F1B8  1  60                      RTS
 00F1B9  1               
 00F1B9  1               ;***************************
-00F1B9  1               ;			   *
+00F1B9  1               ;                          *
 00F1B9  1               ;     READ ADDRESS FIELD   *
-00F1B9  1               ;         SUBROUTINE	   *
-00F1B9  1               ;    (16-SECTOR FORMAT)	   *
-00F1B9  1               ;			               *
+00F1B9  1               ;         SUBROUTINE       *
+00F1B9  1               ;    (16-SECTOR FORMAT)    *
+00F1B9  1               ;                          *
 00F1B9  1               ;***************************
-00F1B9  1               ;			               *
+00F1B9  1               ;                          *
 00F1B9  1               ;    READS VOLUME, TRACK   *
-00F1B9  1               ;        AND SECTOR	       *
-00F1B9  1               ;			               *
-00F1B9  1               ;   ---- ON ENTRY ----	   *
+00F1B9  1               ;        AND SECTOR        *
+00F1B9  1               ;                          *
+00F1B9  1               ;   ---- ON ENTRY ----     *
 00F1B9  1               ;                          *
 00F1B9  1               ;  XREG: SLOTNUM TIMES $10 *
-00F1B9  1               ;			               *
+00F1B9  1               ;                          *
 00F1B9  1               ;  READ MODE  (Q6L, Q7L)   *
-00F1B9  1               ;			               *
-00F1B9  1               ;   ---- ON EXIT ----	   *
-00F1B9  1               ;			               *
-00F1B9  1               ;  CARRY SET IF ERROR	   *
-00F1B9  1               ;			               *
-00F1B9  1               ;  IF NO ERROR:		       *
-00F1B9  1               ;    A-REG HOLDS $AA.	   *
-00F1B9  1               ;    Y-REG HOLDS $00.	   *
-00F1B9  1               ;    X-REG UNCHANGED.	   *
-00F1B9  1               ;    CARRY CLEAR.	       *
-00F1B9  1               ;			               *
+00F1B9  1               ;                          *
+00F1B9  1               ;   ---- ON EXIT ----      *
+00F1B9  1               ;                          *
+00F1B9  1               ;  CARRY SET IF ERROR      *
+00F1B9  1               ;                          *
+00F1B9  1               ;  IF NO ERROR:            *
+00F1B9  1               ;    A-REG HOLDS $AA.      *
+00F1B9  1               ;    Y-REG HOLDS $00.      *
+00F1B9  1               ;    X-REG UNCHANGED.      *
+00F1B9  1               ;    CARRY CLEAR.          *
+00F1B9  1               ;                          *
 00F1B9  1               ;    CSSTV HOLDS CHKSUM,   *
 00F1B9  1               ;      SECTOR, TRACK, AND  *
-00F1B9  1               ;      VOLUME READ.	       *
-00F1B9  1               ;			               *
-00F1B9  1               ;    USES TEMPS COUNT,	   *
-00F1B9  1               ;      LAST, CSUM, AND	   *
+00F1B9  1               ;      VOLUME READ.        *
+00F1B9  1               ;                          *
+00F1B9  1               ;    USES TEMPS COUNT,     *
+00F1B9  1               ;      LAST, CSUM, AND     *
 00F1B9  1               ;      4 BYTES AT CSSTV.   *
-00F1B9  1               ;			               *
+00F1B9  1               ;                          *
 00F1B9  1               ;   ---- EXPECTS ----      *
-00F1B9  1               ;			               *
-00F1B9  1               ;   ORIGINAL 10-SECTOR	   *
-00F1B9  1               ;  NORMAL DENSITY NIBLS	   *
-00F1B9  1               ;			               *
-00F1B9  1               ;   (4-BIT), ODD BITS,	   *
-00F1B9  1               ;   THEN EVEN		       *
-00F1B9  1               ;			               *
+00F1B9  1               ;                          *
+00F1B9  1               ;   ORIGINAL 10-SECTOR     *
+00F1B9  1               ;  NORMAL DENSITY NIBLS    *
+00F1B9  1               ;                          *
+00F1B9  1               ;   (4-BIT), ODD BITS,     *
+00F1B9  1               ;   THEN EVEN              *
+00F1B9  1               ;                          *
 00F1B9  1               ;    ---- CAUTION ----     *
-00F1B9  1               ;			               *
-00F1B9  1               ;         OBSERVE	       *
-00F1B9  1               ;     'NO PAGE CROSS'	   *
-00F1B9  1               ;       WARNINGS ON	       *
+00F1B9  1               ;                          *
+00F1B9  1               ;         OBSERVE          *
+00F1B9  1               ;     'NO PAGE CROSS'      *
+00F1B9  1               ;       WARNINGS ON        *
 00F1B9  1               ;     SOME BRANCHES!!      *
 00F1B9  1               ;                          *
 00F1B9  1               ;    ---- ASSUMES ----     *
@@ -629,9 +629,9 @@ Current file: diskio.s
 00F216  1               ;    X-REG UNCHANGED.  *
 00F216  1               ;    Y-REG HOLDS $00.  *
 00F216  1               ;    CARRY CLEAR.      *
-00F216  1               ;		               *
+00F216  1               ;                      *
 00F216  1               ;  ---- ASSUMES ----   *
-00F216  1               ;		               *
+00F216  1               ;                      *
 00F216  1               ;  1 USEC CYCLE TIME   *
 00F216  1               ;                      *
 00F216  1               ;***********************
@@ -728,7 +728,7 @@ Current file: diskio.s
 00F2BA  1               ;   7-BIT NIBL WRITE SUBRS  *
 00F2BA  1               ;                           *
 00F2BA  1               ;   A-REG OR'D PRIOR EXIT   *
-00F2BA  1               ;       CARRY CLEARED	    *
+00F2BA  1               ;       CARRY CLEARED       *
 00F2BA  1               ;                           *
 00F2BA  1               ;****************************
 00F2BA  1               ;
