@@ -72,6 +72,15 @@ Current file: saratests.s
 000000r 1               SETUP      =    $FD9D
 000000r 1               MONITOR    =    $F901
 000000r 1               ;
+000000r 1               ; DAN][ / ProDOS interface registers
+000000r 1               DAN2_COMMAND = $42
+000000r 1               DAN2_UNIT    = $43
+000000r 1               DAN2_BUFLO   = $44
+000000r 1               DAN2_BUFHI   = $45
+000000r 1               DAN2_BLKLO   = $46
+000000r 1               DAN2_BLKHI   = $47
+000000r 1               DAN2_DENT    = $48  ; device entry address as expected by SOSHDBOOT
+000000r 1               ;
 000000r 1                          .ORG    $F4C5
 00F4C5  1  00 B1 B2 BA  RAMTBL:    .BYTE   $00,$B1,$B2,$BA,$B9,$10,$00,$13
 00F4C9  1  B9 10 00 13  
@@ -295,39 +304,79 @@ Current file: saratests.s
 00F644  1  6D F2 C0                ADC     ACIACM       ; AND ADD DEFAULT STATES
 00F647  1  6D F3 C0                ADC     ACIACN       ; OIF CONTROL AND COMMAND
 00F64A  1  C9 10                   CMP     #$10         ; REGS.        =10?
-00F64C  1  F0 05                   BEQ     ATD          ; YES, NEXT TEST
+00F64C  1  F0 38                   BEQ     ATD          ; YES, NEXT TEST
 00F64E  1  A2 09                   LDX     #09          ; NO,        'ACIA' MESSAGE AND
 00F650  1  20 7B F7                JSR     MESSERR      ; THEN SET ERROR FLAG
+00F653  1               .IFDEF ORIGINAL
 00F653  1               ;
 00F653  1               ; A/D TEST ROUTINE
 00F653  1               ;
-00F653  1  A9 C0        ATD:       LDA     #$C0
-00F655  1  8D DC FF                STA     $FFDC
-00F658  1  AD 5A C0                LDA     PDLEN+2
-00F65B  1  AD 5E C0                LDA     PDLEN+6
-00F65E  1  AD 5C C0                LDA     PDLEN+4
-00F661  1  A0 20                   LDY     #$20
-00F663  1  88           ADCTST1:   DEY                  ; WAIT FOR 40 USEC
-00F664  1  D0 FD                   BNE     ADCTST1
-00F666  1  AD 5D C0                LDA     PDLEN+5      ; SET A/D RAMP
-00F669  1  C8           ADCTST3:   INY                  ; COUNT FOR CONVERSION
-00F66A  1  F0 0A                   BEQ     ADCERR
-00F66C  1  AD 66 C0                LDA     ADTO         ; IF BIT 7=1?
-00F66F  1  30 F8                   BMI     ADCTST3      ; YES, CONTINUE
-00F671  1  98                      TYA                  ; NO, MOVE COUNT TO ACC
-00F672  1  29 E0                   AND     #$E0         ; ACC<32
-00F674  1  F0 05                   BEQ     KEYPLUG
-00F676  1               ADCERR     =       *            ; NO
-00F676  1  A2 0D                   LDX     #$0D         ; PRINT 'A/D' MESS
-00F678  1  20 7B F7                JSR     MESSERR      ; AND SET ERROR FLAG
-00F67B  1               ;
-00F67B  1               ; KEYBOARD PLUGIN TEST
-00F67B  1               ;
-00F67B  1  AD 08 C0     KEYPLUG:   LDA     KEYBD        ; IS KYBD PLUGGED IN?
-00F67E  1  0A                      ASL     A            ; (IS LIGHT CURRENT
-00F67F  1  10 41                   BPL     SEX          ; PRESENT?) NO, BRANCH
-00F681  1  AD DF FF                LDA     SYSD1        ; IS ERROR FLAG SET?
-00F684  1  30 3C                   BMI     SEX          ; ERROR HANG
+00F653  1               ATD:       LDA     #$C0
+00F653  1                          STA     $FFDC
+00F653  1                          LDA     PDLEN+2
+00F653  1                          LDA     PDLEN+6
+00F653  1                          LDA     PDLEN+4
+00F653  1                          LDY     #$20
+00F653  1               ADCTST1:   DEY                  ; WAIT FOR 40 USEC
+00F653  1                          BNE     ADCTST1
+00F653  1                          LDA     PDLEN+5      ; SET A/D RAMP
+00F653  1               ADCTST3:   INY                  ; COUNT FOR CONVERSION
+00F653  1                          BEQ     ADCERR
+00F653  1                          LDA     ADTO         ; IF BIT 7=1?
+00F653  1                          BMI     ADCTST3      ; YES, CONTINUE
+00F653  1                          TYA                  ; NO, MOVE COUNT TO ACC
+00F653  1                          AND     #$E0         ; ACC<32
+00F653  1                          BEQ     KEYPLUG
+00F653  1               ADCERR     =       *            ; NO
+00F653  1                          LDX     #$0D         ; PRINT 'A/D' MESS
+00F653  1                          JSR     MESSERR      ; AND SET ERROR FLAG
+00F653  1               ;
+00F653  1               ; KEYBOARD PLUGIN TEST
+00F653  1               ;
+00F653  1               KEYPLUG:   LDA     KEYBD        ; IS KYBD PLUGGED IN?
+00F653  1                          ASL     A            ; (IS LIGHT CURRENT
+00F653  1                          BPL     SEX          ; PRESENT?) NO, BRANCH
+00F653  1                          LDA     SYSD1        ; IS ERROR FLAG SET?
+00F653  1                          BMI     SEX          ; ERROR HANG
+00F653  1               .ELSE
+00F653  1               DAN2FIND:
+00F653  1  AD 08 C0                LDA     KEYBD        ; load keyboard modifiers
+00F656  1  29 08                   AND     #$08         ; check "alpha lock" key pressed?
+00F658  1  F0 22                   BEQ     DAN2NONE     ; return with "no card found" if alpha lock is pressed
+00F65A  1  A2 05                   LDX     #$05         ; start scanning at slot 4(=5-1)
+00F65C  1  A9 0A                   LDA     #DAN2IDOFS   ; prepare slot address (lower byte)
+00F65E  1  85 48                   STA     DAN2_DENT
+00F660  1  CA           DAN2NXSLOT:DEX                  ; calculate next slot
+00F661  1  F0 19                   BEQ     DAN2NONE     ; check slots 1-4, otherwise abort
+00F663  1  8A                      TXA                  ; prepare the upper address byte for the slot
+00F664  1  09 C0                   ORA     #$C0         ; I/O segment address ($C1-$C4)
+00F666  1  85 49                   STA     DAN2_DENT+1  ; store upper address byte
+00F668  1  A0 04                   LDY     #DAN2IDLEN-1 ; load length of card ID
+00F66A  1  B1 48        :          LDA     (DAN2_DENT),Y; load byte from slot ROM
+00F66C  1  D9 80 F6                CMP     DAN2ID,Y     ; Compare with known DAN2 ROM signature
+00F66F  1  D0 EF                   BNE     DAN2NXSLOT   ; Not a DAN2 controller if bytes don't match: check next slot
+00F671  1  88                      DEY                  ; count remaining bytes to check
+00F672  1  10 F6                   BPL     :-           ; check all bytes of the ID
+00F674  1  A0 F5                   LDY     #$FF-DAN2IDOFS
+00F676  1  B1 48                   LDA     (DAN2_DENT),Y; load DAN][ ProDOS handler entry (lower byte)
+00F678  1  85 48                   STA     DAN2_DENT    ; update slot address (now points to ProDOS handler entry)
+00F67A  1  A5 49                   LDA     DAN2_DENT+1  ; load slot address (upper byte) and return
+00F67C  1  60           DAN2NONE:  RTS
+00F67D  1  6C 48 00     DAN2GO:    JMP     (DAN2_DENT)  ; jump to DAN][ controller handler
+00F680  1               
+00F680  1               DAN2IDLEN = $05                       ; check 5 bytes in ROM for card detection
+00F680  1               DAN2IDOFS = $0A                       ; offset where to find the DAN2 card's ID
+00F680  1  A9 01 9D FB  DAN2ID:    .BYTE $A9,$01,$9D,$FB,$BF  ; ROM bytes at offset $0A: "LDA #$01;STA $BFFB,X"
+00F684  1  BF           
+00F685  1               
+00F685  1                          SPACER1 = *
+00F685  1  01                      .REPEAT $F686-SPACER1
+00F686  1                          ;.BYTE $FF
+00F686  1                          .BYTE $F686-SPACER1
+00F686  1                          .ENDREP
+00F686  1               ;F686
+00F686  1               ATD:
+00F686  1               .ENDIF
 00F686  1               ;
 00F686  1               ; RECONFIGURE THE SYSTEM
 00F686  1               ;
@@ -339,9 +388,13 @@ Current file: saratests.s
 00F694  1  AD 20 C0                LDA     $C020
 00F697  1  A9 10                   LDA     #$10         ; TEST FOR "APPLE 1"
 00F699  1  2D 08 C0                AND     KEYBD
-00F69C  1  D0 03                   BNE     BOOT         ; NO, DO REGULAR BOOT
-00F69E  1  20 01 F9                JSR     MONITOR      ; AND NEVER COME BACK
-00F6A1  1  A2 01        BOOT:      LDX     #01          ; READ BLOCK 0
+00F69C  1               .IFDEF ORIGINAL
+00F69C  1                          BNE     DISKBOOT     ; NO, DO REGULAR BOOT
+00F69C  1               .ELSE
+00F69C  1  D0 24                   BNE     DAN2CHECK    ; check if DAN][ controller card present
+00F69E  1               .ENDIF
+00F69E  1  20 01 F9     GOMONITOR: JSR     MONITOR      ; AND NEVER COME BACK
+00F6A1  1  A2 01        DISKBOOT:  LDX     #01          ; READ BLOCK 0
 00F6A3  1  86 87                   STX     IBCMD
 00F6A5  1  CA                      DEX
 00F6A6  1  86 85                   STX     IBBUFP       ; INTO RAM AT $AOOO
@@ -355,27 +408,63 @@ Current file: saratests.s
 00F6B5  1  A2 1C                   LDX     #$1C
 00F6B7  1  20 38 F7                JSR     STRWT        ; 'RETRY'
 00F6BA  1  20 0F FD                JSR     KEYIN
-00F6BD  1  B0 E2                   BCS     BOOT
+00F6BD  1  B0 E2                   BCS     DISKBOOT
 00F6BF  1  4C 00 A0     GOBOOT:    JMP     $A000        ; GO TO IT FOOL...
 00F6C2  1               ;
 00F6C2  1               ; SYSTEM EXCERCISER
 00F6C2  1               ;
-00F6C2  1  A0 7F        SEX:       LDY     #$7F         ; TRY FROM
-00F6C4  1  98           SEX1:      TYA                  ; $7F TO 0
-00F6C5  1  29 FE                   AND     #$FE         ; ADD.=
-00F6C7  1  49 4E                   EOR     #$4E         ; $4E OR $4F
-00F6C9  1  F0 03                   BEQ     SEX2         ; YES,        SKP
-00F6CB  1  B9 00 C0                LDA     KYBD,Y       ; NO, CONT
-00F6CE  1  88           SEX2:      DEY                  ; NEXT ADD
-00F6CF  1  D0 F3                   BNE     SEX1
-00F6D1  1  AD 51 C0                LDA     TXTMD        ; SET TXT
-00F6D4  1  B9 00 C1     SEX3:      LDA     SLT1,Y       ; EXCERCISE
-00F6D7  1  B9 00 C2                LDA     SLT2,Y       ; ALL
-00F6DA  1  B9 00 C3                LDA     SLT3,Y       ; SLOTS
-00F6DD  1  B9 00 C4                LDA     SLT4,Y
-00F6E0  1  AD FF CF                LDA     EXPROM       ; DISABLE EXPANSION ROM AREA
-00F6E3  1  C8                      INY
-00F6E4  1  D0 EE                   BNE     SEX3
+00F6C2  1               .IFDEF ORIGINAL
+00F6C2  1                          ; This cycles through the slot area when no keyboard is plugged.
+00F6C2  1                          ; This was added as a means to help with board repairs.
+00F6C2  1                          ; => Disabled to make space for DAN][ boot support
+00F6C2  1               SEX:       LDY     #$7F         ; TRY FROM
+00F6C2  1               SEX1:      TYA                  ; $7F TO 0
+00F6C2  1                          AND     #$FE         ; ADD.=
+00F6C2  1                          EOR     #$4E         ; $4E OR $4F
+00F6C2  1                          BEQ     SEX2         ; YES,        SKP
+00F6C2  1                          LDA     KYBD,Y       ; NO, CONT
+00F6C2  1               SEX2:      DEY                  ; NEXT ADD
+00F6C2  1                          BNE     SEX1
+00F6C2  1                          LDA     TXTMD        ; SET TXT
+00F6C2  1               SEX3:      LDA     SLT1,Y       ; EXCERCISE
+00F6C2  1                          LDA     SLT2,Y       ; ALL
+00F6C2  1                          LDA     SLT3,Y       ; SLOTS
+00F6C2  1                          LDA     SLT4,Y
+00F6C2  1                          LDA     EXPROM       ; DISABLE EXPANSION ROM AREA
+00F6C2  1                          INY
+00F6C2  1                          BNE     SEX3
+00F6C2  1               .ELSE
+00F6C2  1                          ; NO SEX: the system excerciser is disabled to make space for the DAN][ boot support.
+00F6C2  1               DAN2CHECK:
+00F6C2  1  20 53 F6                JSR     DAN2FIND     ; check if a DAN][ controller is present
+00F6C5  1  F0 DA                   BEQ     DISKBOOT     ; not found: do normal disk boot - otherwise do a DAN][ bootstrap
+00F6C7  1               DAN2BOOT:
+00F6C7  1                          ; enters with slot number of DANII card in A
+00F6C7  1  0A                      ASL     A            ; shift by 4
+00F6C8  1  0A                      ASL     A
+00F6C9  1  0A                      ASL     A
+00F6CA  1  0A                      ASL     A
+00F6CB  1  85 43                   STA     DAN2_UNIT
+00F6CD  1  A9 A3                   LDA     #$A3         ; load Apple /// boot block from the controller
+00F6CF  1  85 42                   STA     DAN2_COMMAND ; command=$A3=load Apple 3 boot block
+00F6D1  1  A9 A0                   LDA     #$A0
+00F6D3  1  85 45                   STA     DAN2_BUFHI   ; set buffer address to $A0..
+00F6D5  1  A9 00                   LDA     #$00
+00F6D7  1  85 44                   STA     DAN2_BUFLO   ; set buffer address to $..00
+00F6D9  1  85 46                   STA     DAN2_BLKLO   ; read block 0
+00F6DB  1  85 47                   STA     DAN2_BLKHI
+00F6DD  1  20 7D F6                JSR     DAN2GO       ; call DANII handler to load boot block
+00F6E0  1  B0 BC                   BCS     GOMONITOR    ; enter monitor when loading failed
+00F6E2  1  4C 00 A0                JMP     $A000        ; jump to loaded boot program
+00F6E5  1               
+00F6E5  1                          SPACER2 = *
+00F6E5  1                          .REPEAT $F6E5-SPACER2
+00F6E5  1                          .BYTE $FF
+00F6E5  1                          ;.BYTE $F6E5-SPACER2
+00F6E5  1                          .ENDREP
+00F6E5  1  23                      .BYTE $23 ; ROM CHECKSUM
+00F6E6  1               ;F6E6
+00F6E6  1               .ENDIF
 00F6E6  1               ;
 00F6E6  1               ; RAM TEST ROUTINE
 00F6E6  1               ;
@@ -562,4 +651,5 @@ Current file: saratests.s
 00F7FC  1  D0 CB                   BNE     RAMERR
 00F7FE  1               
 00F7FE  1               ;           .END
+00F7FE  1               ; F7FE
 00F7FE  1               

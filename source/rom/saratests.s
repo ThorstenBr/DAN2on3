@@ -454,7 +454,7 @@ DAN2BOOT:
            .BYTE $FF
            ;.BYTE $F6E5-SPACER2
            .ENDREP
-           .BYTE $00 ; ROM CHECKSUM
+           .BYTE $23 ; ROM CHECKSUM
 ;F6E6
 .ENDIF
 ;

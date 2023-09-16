@@ -14,10 +14,12 @@ DRIVER      := DAN2ON3.DRIVER
 all: bin
 	make -C source/driver $@
 	make -C source/configmenu $@
+	make -C source/rom $@
 
 clean:
 	make -C source/driver $@
 	make -C source/configmenu $@
+	make -C source/rom $@
 	rm -f bin/*
 
 bin:
