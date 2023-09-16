@@ -13,3 +13,7 @@ DAN2ON3.DRIVER:
   - Separate binary file with the DANII SOS driver.
   - Useful if you want to generate your own disk images (using CiderPress etc).
 
+VOLA3_APPLEIII_BOOT_MENU.po:
+  - Apple III boot menu for the DAN][ card.
+  - Store this file on the first SD card of your DAN][ controller.
+

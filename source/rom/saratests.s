@@ -68,6 +68,15 @@ CLDSTRT    =    $FD98
 SETUP      =    $FD9D
 MONITOR    =    $F901
 ;
+; DAN][ / ProDOS interface registers
+DAN2_COMMAND = $42
+DAN2_UNIT    = $43
+DAN2_BUFLO   = $44
+DAN2_BUFHI   = $45
+DAN2_BLKLO   = $46
+DAN2_BLKHI   = $47
+DAN2_DENT    = $48  ; device entry address as expected by SOSHDBOOT
+;
            .ORG    $F4C5
 RAMTBL:    .BYTE   $00,$B1,$B2,$BA,$B9,$10,$00,$13
 
@@ -291,6 +300,7 @@ ACIA:      CLC                  ; SET UP FOR ADDITION
            BEQ     ATD          ; YES, NEXT TEST
            LDX     #09          ; NO,        'ACIA' MESSAGE AND
            JSR     MESSERR      ; THEN SET ERROR FLAG
+.IFDEF ORIGINAL
 ;
 ; A/D TEST ROUTINE
 ;
@@ -321,6 +331,44 @@ KEYPLUG:   LDA     KEYBD        ; IS KYBD PLUGGED IN?
            BPL     SEX          ; PRESENT?) NO, BRANCH
            LDA     SYSD1        ; IS ERROR FLAG SET?
            BMI     SEX          ; ERROR HANG
+.ELSE
+DAN2FIND:
+           LDA     KEYBD        ; load keyboard modifiers
+           AND     #$08         ; check "alpha lock" key pressed?
+           BEQ     DAN2NONE     ; return with "no card found" if alpha lock is pressed
+           LDX     #$05         ; start scanning at slot 4(=5-1)
+           LDA     #DAN2IDOFS   ; prepare slot address (lower byte)
+           STA     DAN2_DENT
+DAN2NXSLOT:DEX                  ; calculate next slot
+           BEQ     DAN2NONE     ; check slots 1-4, otherwise abort
+           TXA                  ; prepare the upper address byte for the slot
+           ORA     #$C0         ; I/O segment address ($C1-$C4)
+           STA     DAN2_DENT+1  ; store upper address byte
+           LDY     #DAN2IDLEN-1 ; load length of card ID
+:          LDA     (DAN2_DENT),Y; load byte from slot ROM
+           CMP     DAN2ID,Y     ; Compare with known DAN2 ROM signature
+           BNE     DAN2NXSLOT   ; Not a DAN2 controller if bytes don't match: check next slot
+           DEY                  ; count remaining bytes to check
+           BPL     :-           ; check all bytes of the ID
+           LDY     #$FF-DAN2IDOFS
+           LDA     (DAN2_DENT),Y; load DAN][ ProDOS handler entry (lower byte)
+           STA     DAN2_DENT    ; update slot address (now points to ProDOS handler entry)
+           LDA     DAN2_DENT+1  ; load slot address (upper byte) and return
+DAN2NONE:  RTS
+DAN2GO:    JMP     (DAN2_DENT)  ; jump to DAN][ controller handler
+
+DAN2IDLEN = $05                       ; check 5 bytes in ROM for card detection
+DAN2IDOFS = $0A                       ; offset where to find the DAN2 card's ID
+DAN2ID:    .BYTE $A9,$01,$9D,$FB,$BF  ; ROM bytes at offset $0A: "LDA #$01;STA $BFFB,X"
+
+           SPACER1 = *
+           .REPEAT $F686-SPACER1
+           ;.BYTE $FF
+           .BYTE $F686-SPACER1
+           .ENDREP
+;F686
+ATD:
+.ENDIF
 ;
 ; RECONFIGURE THE SYSTEM
 ;
@@ -332,9 +380,13 @@ RECON:     LDA     #$77         ; TURN ON SCREEN
            LDA     $C020
            LDA     #$10         ; TEST FOR "APPLE 1"
            AND     KEYBD
-           BNE     BOOT         ; NO, DO REGULAR BOOT
-           JSR     MONITOR      ; AND NEVER COME BACK
-BOOT:      LDX     #01          ; READ BLOCK 0
+.IFDEF ORIGINAL
+           BNE     DISKBOOT     ; NO, DO REGULAR BOOT
+.ELSE
+           BNE     DAN2CHECK    ; check if DAN][ controller card present
+.ENDIF
+GOMONITOR: JSR     MONITOR      ; AND NEVER COME BACK
+DISKBOOT:  LDX     #01          ; READ BLOCK 0
            STX     IBCMD
            DEX
            STX     IBBUFP       ; INTO RAM AT $AOOO
@@ -348,11 +400,15 @@ BOOT:      LDX     #01          ; READ BLOCK 0
            LDX     #$1C
            JSR     STRWT        ; 'RETRY'
            JSR     KEYIN
-           BCS     BOOT
+           BCS     DISKBOOT
 GOBOOT:    JMP     $A000        ; GO TO IT FOOL...
 ;
 ; SYSTEM EXCERCISER
 ;
+.IFDEF ORIGINAL
+           ; This cycles through the slot area when no keyboard is plugged.
+           ; This was added as a means to help with board repairs.
+           ; => Disabled to make space for DAN][ boot support
 SEX:       LDY     #$7F         ; TRY FROM
 SEX1:      TYA                  ; $7F TO 0
            AND     #$FE         ; ADD.=
@@ -369,6 +425,38 @@ SEX3:      LDA     SLT1,Y       ; EXCERCISE
            LDA     EXPROM       ; DISABLE EXPANSION ROM AREA
            INY
            BNE     SEX3
+.ELSE
+           ; NO SEX: the system excerciser is disabled to make space for the DAN][ boot support.
+DAN2CHECK:
+           JSR     DAN2FIND     ; check if a DAN][ controller is present
+           BEQ     DISKBOOT     ; not found: do normal disk boot - otherwise do a DAN][ bootstrap
+DAN2BOOT:
+           ; enters with slot number of DANII card in A
+           ASL     A            ; shift by 4
+           ASL     A
+           ASL     A
+           ASL     A
+           STA     DAN2_UNIT
+           LDA     #$A3         ; load Apple /// boot block from the controller
+           STA     DAN2_COMMAND ; command=$A3=load Apple 3 boot block
+           LDA     #$A0
+           STA     DAN2_BUFHI   ; set buffer address to $A0..
+           LDA     #$00
+           STA     DAN2_BUFLO   ; set buffer address to $..00
+           STA     DAN2_BLKLO   ; read block 0
+           STA     DAN2_BLKHI
+           JSR     DAN2GO       ; call DANII handler to load boot block
+           BCS     GOMONITOR    ; enter monitor when loading failed
+           JMP     $A000        ; jump to loaded boot program
+
+           SPACER2 = *
+           .REPEAT $F6E5-SPACER2
+           .BYTE $FF
+           ;.BYTE $F6E5-SPACER2
+           .ENDREP
+           .BYTE $00 ; ROM CHECKSUM
+;F6E6
+.ENDIF
 ;
 ; RAM TEST ROUTINE
 ;
@@ -555,3 +643,4 @@ RAMRD:     CMP     (PTRLO),Y
            BNE     RAMERR
 
 ;           .END
+; F7FE
