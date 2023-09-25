@@ -246,7 +246,6 @@ LOADOK:
 MAIN:                         ; main
          LDA $C051            ; GR/TEXT=1 to enable color
 
-.IFDEF DANII_BOOTLOADER
          ; show "DANII: press RETURN" message and wait
          LDX #DANBOOTMSG-MSGS
          LDA #22
@@ -260,6 +259,9 @@ WAITKEY:
          BMI BOOTKEY          ; keypress?
          DEY                  ; calculate timeout
          BNE WAITKEY
+.IFDEF DISK_BOOTLOADER
+         BEQ CFGMENU          ; launch configuration menu when no key was pressed (when loading from disk)
+.ENDIF
 BOOTSTRP:JMP READBOOT         ; no key pressed: boot with recent volume configuration
 BOOTKEY: STA KBD_STROBE       ; clear pending keypress
          CMP #13+128          ; RETURN key?
@@ -274,9 +276,13 @@ BOOTKEY: STA KBD_STROBE       ; clear pending keypress
          JSR DAN_SETVOLW      ; configure the controller
          LDA #$00             ; continue with bootstrap
 NOTANUMBER:
+.IFDEF DANII_BOOTLOADER
          CMP #27+128          ; ESC key?
          BNE BOOTSTRP
+         JSR HOME             ; clear screen
          JMP DISKBOOT         ; do normal disk boot
+.ELSE
+         JMP BOOTSTRP
 .ENDIF
 
 CFGMENU: JSR SHOW_TITLE       ; show header/footer lines
@@ -666,10 +672,8 @@ NEWIPMSG:ASCHI "NEW IP:    .   .   .   "
        .BYTE 0
 REBOOTMSG:ASCHI "INSERT BOOTDISK - PRESS RESET"
        .BYTE 0
-.IFDEF DANII_BOOTLOADER
 DANBOOTMSG:ASCHI "DAN2ON3: PRESS RETURN"
        .BYTE 0
-.ENDIF
 
 GOTOROW:
          STA CV            ; set row
