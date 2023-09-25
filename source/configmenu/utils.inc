@@ -10,6 +10,7 @@ CHRRAM_ENABLE = $C04F ; character RAM enable
 BANKREG       = $FFEF ; Bank selection register for $2000-$9FFF (lower 4 bits)
 CLRSCR        = $FB7D ; screen init routine in ROM
 BLOCKIO       = $F479 ; BLOCK I/O routine in ROM
+DISKBOOT      = $F6A1 ; DISK BOOT routine in ROM
 ENVREG        = $FFDF ; Environment Register
                       ; flags: 0x80: disable 2MHz (enable 1MHz)
                       ;        0x40: enable I/O bank
@@ -17,7 +18,8 @@ ENVREG        = $FFDF ; Environment Register
                       ;        0x10: enable reset/NMI
                       ;        0x08: disable RAM write
                       ;        0x04: primary stack
-                      ;        0x03: enable ROM space
+                      ;        0x02: select ROM page 1/page 0 (page 1=default)
+                      ;        0x01: enable ROM space
 
 SCRNLOC    =    $58
 LMARGIN    =    SCRNLOC      ; left window border for text display (X position after new line)

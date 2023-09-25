@@ -263,7 +263,20 @@ WAITKEY:
 BOOTSTRP:JMP READBOOT         ; no key pressed: boot with recent volume configuration
 BOOTKEY: STA KBD_STROBE       ; clear pending keypress
          CMP #13+128          ; RETURN key?
+         BEQ CFGMENU
+         CMP #'0'+128         ; quick access keys '0'...
+         BMI NOTANUMBER
+         CMP #'9'+128+1       ; ... to '9' pressed?
+         BPL NOTANUMBER
+         AND #$0F             ; quick access key: convert ASCII to number (0-9)
+         STA VOLDRIVE0        ; store volume number
+         STA VOLDRIVE1        ; store volume number
+         JSR DAN_SETVOLW      ; configure the controller
+         LDA #$00             ; continue with bootstrap
+NOTANUMBER:
+         CMP #27+128          ; ESC key?
          BNE BOOTSTRP
+         JMP DISKBOOT         ; do normal disk boot
 .ENDIF
 
 CFGMENU: JSR SHOW_TITLE       ; show header/footer lines
