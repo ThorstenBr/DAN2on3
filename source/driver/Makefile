@@ -63,8 +63,8 @@ $(OUTPUT_DISK): bin/SOS.DRIVER $(DAN2ON3_DRIVER) $(SOURCE_DISK)
 	$(ECHO) "$(LOG_PREFIX) Adding new SOS.DRIVER to SysUtils disk..."
 	cat bin/SOS.DRIVER | $(AppleCommander) -p $(TEMP_DISK) SOS.DRIVER SOS
 	mv $(TEMP_DISK) $@
-	cp $@ ../../bin/.
-	$(DSK2PO) ../../bin/$(notdir $@)
+	cp $@ ../../disks/.
+	$(DSK2PO) ../../disks/$(notdir $@)
 
 # show disk contents
 list:

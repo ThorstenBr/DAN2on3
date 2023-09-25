@@ -67,8 +67,8 @@ $(OUTPUT_DISK): $(DISK_BIN_FILE)
 	$(ECHO) "$(LOG_PREFIX) Patching bootloader to disk $@"
 	$(APPLE_BOOT) --po --extrablocks 0x1200 $< $(TEMP_DISK) $(OUTPUT_DISK)
 	rm $(TEMP_DISK)
-	cp $@ ../../bin/.
-	$(PO2DSK) ../../bin/$(notdir $@)
+	cp $@ ../../disks/.
+	$(PO2DSK) ../../disks/$(notdir $@)
 
 # Rules to build an Apple III boot menu for the DANII card (boot program stored on the DANII card)
 bin/VOLA3_%.o: %.s Makefile
