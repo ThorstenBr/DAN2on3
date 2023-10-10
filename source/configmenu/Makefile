@@ -11,7 +11,7 @@ VER_MAINT      := $(word 3,$(subst ., ,$(CONFIG_VERSION)))
 VERSION_INFO   := -DVER_MAJOR=$(VER_MAJOR) -DVER_MINOR=$(VER_MINOR) -DVER_MAINT=$(VER_MAINT)
 
 # assembler source
-ASM_FILE       := bootpg_v6.s
+ASM_FILE       := bootpg.s
 
 # linked output
 DISK_BIN_FILE  := $(addprefix bin/,$(addprefix disk_,$(ASM_FILE:.s=.bin)))
@@ -65,7 +65,7 @@ $(OUTPUT_DISK): $(DISK_BIN_FILE)
 	$(ECHO) "$(LOG_PREFIX) Adding separate driver file to disk..."
 	cat ../driver/bin/DAN2ON3.DRIVER | $(AppleCommander) -p $(TEMP_DISK) DAN2ON3.DRIVER SOS
 	$(ECHO) "$(LOG_PREFIX) Patching bootloader to disk $@"
-	$(APPLE_BOOT) --po --extrablocks 0x1200 $< $(TEMP_DISK) $(OUTPUT_DISK)
+	$(APPLE_BOOT) --po --extrablocks 0x1400 $< $(TEMP_DISK) $(OUTPUT_DISK)
 	rm $(TEMP_DISK)
 	cp $@ ../../disks/.
 	$(PO2DSK) ../../disks/$(notdir $@)

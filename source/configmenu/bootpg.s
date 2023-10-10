@@ -6,7 +6,8 @@
 ;
 ; Apple II(I) forever!
 
-; Bootloader v6
+; Bootloader v7
+; - support for up to 128 volumes/SD card
 ; - improved GUI with top/bottom title bars
 ; - highlighted volume selection
 ; - cursor key controls
@@ -31,6 +32,8 @@
 
 ; row where to start showing the volume names
 MENU_ROW   = 4
+; row where the SD input prompts are shown
+INPUT_ROW  = 21
 
 INSTRUC    = $F0
 LOWBT      = $F1
@@ -43,6 +46,7 @@ GVOLDRIVE1 = $F8
 SCRATCH    = $F9
 DRIVE      = $FA
 VOL        = $FB
+VOLPAGE    = $FC  ; to select one of up to 8 volume pages (VOLPAGE=$00/$10/$20/.../$70)
 
 BLKBUF = $1000
 
@@ -285,17 +289,26 @@ NOTANUMBER:
          JMP BOOTSTRP
 .ENDIF
 
-CFGMENU: JSR SHOW_TITLE       ; show header/footer lines
-         JSR SHOWSD
+CFGMENU: LDA #$00
+         STA VOLPAGE
          JSR DAN_GETVOL       ; get volume numbers
-         JSR DISPCUR          ; show current volume numbers
-         JSR SHOWVOLNAMES
          JSR PREVIOUS_VOLUMES ; load default value (previously selected volumes)
-         JSR DAN_SETVOL       ; restore current volume selection (user aborts or presses RESET)
-         JSR SHOWIP           ; show FTP/IP configuration, if applicable
          JSR ASKVOL           ; ask for new user selection
+         LDA VOLDRIVE0
+         STA BLKLO
+         LDA VOLDRIVE1
+         STA BLKHI
          JSR DAN_SETVOLW      ; write user selection
          JMP REBOOT
+
+UPDATEVOLNAMES:
+         JSR DISPCUR          ; show current volume numbers
+         JSR SHOWVOLNAMES
+         LDA GVOLDRIVE0
+         STA BLKLO
+         LDA GVOLDRIVE1
+         STA BLKHI
+         JMP DAN_SETVOL       ; restore current volume selection (user aborts or presses RESET)
 
 SHOWVOLNAMES:
          LDA #0
@@ -306,9 +319,10 @@ UNITLOOP:
          JSR VTAB
 
          LDA VOL         ; set both drives to location
-         STA VOLDRIVE0   ; select volume #VOL on SD1
+         ORA VOLPAGE     ; include current volume page
+         STA BLKLO       ; select volume #VOL on SD1
          ORA #$80        ; select volume #VOL on SD2
-         STA VOLDRIVE1
+         STA BLKHI
          JSR DAN_SETVOL
 
          LDA #0          ; start at column 0
@@ -346,7 +360,8 @@ PREVIOUS_VOLUMES:
          STA VOLDRIVE1
          RTS
 
-SHOWSD:
+; show SD1/2 messages above the volume list
+SHOWSDLABELS:
          LDY #$00
          STY CH
          LDY #$03
@@ -357,8 +372,11 @@ SHOWSD:
          STY CH
          JMP SD2MSG
 
-DISPCUR:                 ; show current volume numbers
-         LDA #21         ; row 21
+; show currently selected SD cards and volumes for both drives
+DISPCUR:                      ; show current volume numbers
+         LDA DRIVE            ; remember currently active DRIVE
+         PHA
+         LDA #INPUT_ROW       ; row for input prompts
          JSR GOTOROW
          JSR DRVMSG0
          LDA #20*2
@@ -367,14 +385,15 @@ DISPCUR:                 ; show current volume numbers
          LDA #$01             ; show selection for drives 1+0
          STA DRIVE
 :        JSR SHOW_VOLNUM
-         DEC DRIVE
-         BPL :-               ; both drives displayed?
+         DEC DRIVE            ; next drive (drive 0)
+         BPL :-               ; both drives already displayed?
+         PLA
+         STA DRIVE            ; restore currently active DRIVE
          RTS
 
 ABORT:
          JSR WIPE_SELECTION   ; clear selected volumes
          JSR PREVIOUS_VOLUMES ; restore previous volume selection
-         JSR DISPCUR          ; show selected volume numbers
          PLA
          PLA
          CLC
@@ -382,31 +401,47 @@ ABORT:
 
 ; ask for volume selection(s)
 ASKVOL:
+         JSR SHOW_TITLE    ; show header/footer lines
+         JSR SHOWSDLABELS  ; show SD1/2 title above the volume list
+         LDA VOLDRIVE0
+         AND #$70          ; preselect volume page for first volume
+         STA VOLPAGE       ; remember initial page
          LDA #$00          ; start with selecting card 0
          STA DRIVE
-GETHEX:
+         JSR UPDATEVOLNAMES; show volume names of current page
+         JSR SHOWIP        ; show FTP/IP configuration, if applicable
+WHILE_ASKVOL:
          LDA #FLASHING     ; show current drive selection with flashing style
          JSR REDRAW_LINE
          JSR SHOW_VOLNUM   ; show selected volume number
          LDA #' '          ; set simple cursor
          STA CURSOR
          JSR RDKEY
-         PHA
+         PHA               ; remember key code
          LDA #AUTO         ; show current drive selection, use automatic style
          JSR REDRAW_LINE
-         PLA
          LDX DRIVE         ; current card in X
-         LDY VOLDRIVE0,X   ; current volume selection in Y
-         CMP #13+128       ; RETURN key
+         LDA VOLDRIVE0,X   ; get current volume selection
+         AND #$8F          ; mask SD card and line number only
+         TAY               ; selection in Y
+         PLA               ; restore key code
+KEYCHECK:CMP #KEY_RETURN   ; RETURN key?
          BNE NORET
-RETKEY:
-         LDA #INVERSE      ; show current drive selectiuon in inverse style
+RETURN:  LDA #INVERSE      ; show current drive selectiuon in inverse style
          JSR REDRAW_LINE
          LDA DRIVE
          EOR #$01
          STA DRIVE
-         BNE GETHEX
-         RTS
+         BNE :+            ; second drive already configured?
+         RTS               ; both drives configured: done!
+:        TAX               ; now select second drive
+         LDA VOLDRIVE0,X   ; current volume selection in Y
+         AND #$70          ; mask page
+         CMP VOLPAGE       ; other drive on the same page?
+         BEQ WHILE_ASKVOL  ; yes, then next loop
+         STA VOLPAGE       ; store new current page
+         JSR UPDATEVOLNAMES; show new current page
+         JMP WHILE_ASKVOL
 NORET:
          CMP #KEY_ESC      ; ESCAPE key
          BEQ ABORT
@@ -428,30 +463,50 @@ UP:      TYA
          AND #$1E
          PLP               ; restore flags with carry for drive
          ROR A             ; shift drive flag back into register
-         TAY
-UPDATE_LINE:
-         TYA
+UPDATE_LINE:               ; selection in A
          AND #$8f          ; wrap on overflow
+         ORA VOLPAGE
          STA VOLDRIVE0,X   ; save current volume selection
-         JMP GETHEX
+W_A:     JMP WHILE_ASKVOL
 NO_UP:
          CMP #KEY_SPACE    ; space bar: DOWN
          BEQ DOWN
          CMP #KEY_DOWN     ; arrow down
          BNE NO_DOWN
 DOWN:    INY
+         TYA               ; selection to A
          BNE UPDATE_LINE   ; unconditional branch
 NO_DOWN:
          CMP #KEY_LEFT     ; left arrow?
-         BEQ TOGGLE_CARD   ; select other card
-         CMP #KEY_RIGHT    ; right arrow?
-         BNE NO_TOGGLE
-TOGGLE_CARD:
-         TYA
-         EOR #$80          ; toggle card
+         BNE NO_LEFT
+LEFT:    TYA
+         EOR #$80  	   ; toggle selected card
+         TAY
+         ORA VOLPAGE
          STA VOLDRIVE0,X   ; save updated selection
-         BPL GETHEX_FAR    ; unconditional branch
-NO_TOGGLE:
+         BPL W_A
+FLIPL:   LDA #$F0          ; flip page to the left (decrease)
+FLIP:    CLC
+         ADC VOLPAGE
+         AND #$70          ; allow pages 0-7 only
+         STA VOLPAGE
+         TYA
+         PHA               ; push selected line to stack
+         JSR UPDATEVOLNAMES
+         LDX DRIVE         ; current card in X
+         PLA               ; selection in A
+         JMP UPDATE_LINE
+NO_LEFT: CMP #KEY_RIGHT    ; right arrow?
+         BNE NO_RIGHT
+RIGHT:   TYA
+         EOR #$80          ; toggle card
+         TAY
+         ORA VOLPAGE
+         STA VOLDRIVE0,X   ; save updated selection
+         BMI W_A
+FLIPR:   LDA #$10          ; flip page to the right (increase)
+         BNE FLIP
+NO_RIGHT:
          CMP #'a'+128      ; lower case letters?
          BCC NOLOWER
          SEC
@@ -474,26 +529,26 @@ SELECT:
          TYA               ; get current selection
          AND #$80          ; mask SD card bit
          ORA SCRATCH
-         STA VOLDRIVE0,X
-         JSR SHOW_VOLNUM
-         JMP RETKEY
+         TAY
+         JMP UPDATE_LINE
 NONUM:
          CMP #'I'+128      ; FTP/IP configuration with (I)P
          BEQ IPCONFIG
-GETHEX_FAR:
-         JMP GETHEX
+         BNE W_A
 IPCONFIG:
          JSR SHOW_TITLE
-         JSR SHOWIP        ; show current IP address
-         JMP NEWIP         ; enter new IP address
+         JSR SHOWIP       ; show current IP address
+         JSR NEWIP        ; enter new IP address
+         JMP ASKVOL
 
 DVHEX:   CMP #$FF
          BEQ DSPEC
-         JMP PRHEX
+         JMP PRBYTE
 DSPEC:
          LDA #'!'+128
          JMP COUT
 
+; show top and bottom title bars
 SHOW_TITLE:
          JSR HOME           ; clear screen
          LDA #(COL_GREEN*16)
@@ -521,18 +576,17 @@ SHOW_VOL_SELECT:
          LDY DRIVE
          LDA VOLDRIVE0,Y   ; get volume selection for this drive
          PHA
-         LDY #$01          ; SD1
-         ASL A
-         BCC :+
-         INY               ; SD2
-:        TYA
-         JSR DVHEX
-         LDY CH
-         INY
-         INY
-         STY CH
+         BMI VLSEL2        ; it's on SD2 if MSB is set
+         LDY #$01
+         BNE VLSEL
+VLSEL2:  LDY #$02          ; SD2
+VLSEL:   TYA
+         JSR PRHEX         ; show "1" or "2" (for SD1/SD2)
+         INC CH            ; skip one character for "/"
+         INC CH
          PLA
-         JSR DVHEX
+         AND #$7F          ; mask MSB
+         JSR DVHEX         ; show volume selection number
          DEC CH
          DEC CH
          RTS
@@ -542,9 +596,10 @@ DISPVOLUME:                ; display volume number/name
          LDA #COL_YELLOW*16
          STA BKGND
          LDA VOL           ; print hex digit for row
+         ORA VOLPAGE       ; consider current page
          PHA               ; remember volume
          AND #$7F          ; clear SD2 bit
-         JSR PRHEX
+         JSR PRBYTE
          LDA #':'+128
          JSR COUT          ; print ":"
          LDA #COL_WHITE*16
@@ -552,9 +607,9 @@ DISPVOLUME:                ; display volume number/name
          INC CH            ; skip space
          INC CH
          PLA               ; restore volume
-         CMP GVOLDRIVE0
+         CMP VOLDRIVE0
          BEQ SETINV
-         CMP GVOLDRIVE1
+         CMP VOLDRIVE1
          BNE NOINVFLG
 SETINV:
          LDA #COL_GREEN*16
@@ -584,7 +639,7 @@ DISPL:
          INX
          CPX SCRATCH       ; check length
          BNE DISPL
-FILL_NXT:CPX #$0F          ; fill with spaces until 16 characters are written
+FILL_NXT:CPX #$0F          ; fill with spaces until 15 characters are written
          BNE FILL
          LDA #COL_WHITE*16
          STA BKGND
@@ -608,22 +663,25 @@ REDRAW_LINE:
          BNE REDRAW1       ; not identical?
          LDA #INVERSE      ; identical: use inverse text font, since vol is still selected
 
-REDRAW1: 
+REDRAW1:
          STA SCRATCH       ; save display mode
          LDA VOLDRIVE0,X   ; load volume selection
          BMI :+            ; is a volume on card 2 is selected?
-         LDY #3
+         LDY #4
          BNE SHOW_CARD0    ; unconditional branch
-:        LDY #23           ; show in right half of the screen
+:        LDY #24           ; show in right half of the screen
 SHOW_CARD0:
          STY CH            ; store cursor X position
-         AND #$0F          ; mask volume number
-         CLC
+         AND #$7F          ; mask volume number
+         EOR VOLPAGE       ; clear volume page bits (if they match)
+         CMP #$10          ; selection beyond 16? (other page)
+         BCS NO_SHOW       ; do not show when selection is on other page
+                           ; carry is already clear
          ADC #MENU_ROW     ; Y-offset
          STA CV            ; store cursor Y position
          JSR VTAB          ; calculate screen address
          LDY CH            ; load cursor Y position
-         LDX #$0E          ; load number of characters
+         LDX #$0F          ; load number of characters (15)
 LOOP_LINE:
          LDA (BASL),Y
          AND #$7F
@@ -631,7 +689,7 @@ LOOP_LINE:
          STA (BASL),Y
          INY
          DEX
-         BPL LOOP_LINE
+         BNE LOOP_LINE
 NO_SHOW:
          RTS
 
@@ -702,8 +760,10 @@ SD1MSG:  LDX #(SDMSG-MSGS)
          BNE DISPMSG       ; unconditional branch
 
 DRVMSG1: LDA #'2'+128
-         STA DRIVEMSG+6
+         BNE DRVMSG
 DRVMSG0:
+         LDA #'1'+128
+DRVMSG:  STA DRIVEMSG+6
          LDX #(DRIVEMSG-MSGS)
 DISPMSG: LDA MSGS,X
          BEQ RTSL
@@ -727,10 +787,8 @@ DAN_SETVOLW:
 DAN_SETVOL:
          LDA #$06          ; set volume dont write to EEPROM
 DAN_VOLCMD:
-         STA COMMAND
-         LDA VOLDRIVE0
-         STA BLKLO         ; DRIVE 0: firmware expects 0-7f=volumes on SD1, 0x80-0xfe=volumes on SD2
-         LDA VOLDRIVE1
+         STA COMMAND       ; DRIVE 0 in BLKLO: firmware expects 0-7f=volumes on SD1, 0x80-0xfe=volumes on SD2
+         LDA BLKHI
          EOR #$80          ; DRIVE 1: flip MSB - since the firmware expects 0-7f=volumes on SD2, 0x80-0xfe=volumes on SD1
          STA BLKHI
 DAN_COMM:
@@ -781,7 +839,7 @@ SHOWIP:
 
          LDA BLKBUF+8      ; third byte
          JSR PRIPDOT
-         
+
          LDA BLKBUF+9      ; last byte
          JSR PRDEC
          LDA #COL_WHITE*16
@@ -886,7 +944,7 @@ DIGITDONE:                 ; when user entered less than 3 digits (space/dot/RET
          CLC
          RTS
 NOSP:
-         CMP #13+128
+         CMP #KEY_RETURN
          BEQ DIGITDONE
          CMP #'.'+128
          BEQ DIGITDONE
@@ -909,22 +967,15 @@ SHOW_SELECTION:            ; highlight selected volume names
 WIPE_SELECTION:            ; normal display of selected volume names
          LDA #NORMAL       ; show drive selection in normal text (wipes selection)
 UPDATE_SELECTION:
-         PHA               ; save display style
-         LDX #$00          ; drive 1
+         LDX #$01          ; drive 2
          STX DRIVE
+:        PHA               ; save display style
          JSR REDRAW_LINE
          PLA               ; restore display style
-         INC DRIVE         ; drive 2
-         JMP REDRAW_LINE
+         DEC DRIVE         ; drive 1
+         BPL :-
+         RTS
 
-REBOOT:
-         PHP
-         JSR SHOW_SELECTION; show current selection
-         LDA #22           ; show ok/error in row 22
-         JSR GOTOROW
-         LDA #17*2         ; center horizontally
-         STA CH
-         PLP
 SHOW_CFG_RESULT:
          LDX #(OKMSG-MSGS)
          BCC SHOW_MSG
@@ -937,6 +988,18 @@ DELAY:
          JSR WAITLOOP
          DEX
          BNE DELAY
+         JMP HOME          ; clear screen
+
+REBOOT:
+         PHP
+         JSR DISPCUR       ; show selected volume numbers
+         JSR SHOW_SELECTION; show current selection
+         LDA #22           ; show ok/error in row 22
+         JSR GOTOROW
+         LDA #17*2         ; center horizontally
+         STA CH
+         PLP
+         JSR SHOW_CFG_RESULT
 
 READBOOT:JSR HOME          ; clear screen
 .IFNDEF NO_BOOT
@@ -1015,7 +1078,7 @@ PR10:
          TXA
          JSR PRHEX
          PLA
-PR1:    
+PR1:
          JMP PRHEX
 
 DECDIGIT:
@@ -1033,7 +1096,7 @@ DECDONE:
 BOOT_END:
 .IFDEF DANII_BOOTLOADER
  PADDING_START = *
- .REPEAT $A600-PADDING_START
+ .REPEAT $A800-PADDING_START
  .BYTE $FF
  .ENDREP
 .ENDIF

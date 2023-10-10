@@ -7,7 +7,6 @@ KBD_STROBE    = $C010 ; clear keypress
 BEEPER        = $C040 ; beep!
 CHRRAM_DISABLE= $C04E ; character RAM disable
 CHRRAM_ENABLE = $C04F ; character RAM enable
-BANKREG       = $FFEF ; Bank selection register for $2000-$9FFF (lower 4 bits)
 CLRSCR        = $FB7D ; screen init routine in ROM
 BLOCKIO       = $F479 ; BLOCK I/O routine in ROM
 DISKBOOT      = $F6A1 ; DISK BOOT routine in ROM
@@ -20,6 +19,17 @@ ENVREG        = $FFDF ; Environment Register
                       ;        0x04: primary stack
                       ;        0x02: select ROM page 1/page 0 (page 1=default)
                       ;        0x01: enable ROM space
+
+SOUND_DAC     = $FFE0 ; SOUND DAC: 6 bit
+BANKREG       = $FFEF ; flags:
+                      ;        0x80: /IRQ input
+                      ;        0x40: /AIISW output
+                      ;        0x20: /IRQ3 input
+                      ;        0x10: /IRQ4 input
+                      ;        0x08: reserved/NC
+                      ;        0x04: bank switch bit 2
+                      ;        0x02: bank switch bit 1
+                      ;        0x01: bank switch bit 0
 
 SCRNLOC    =    $58
 LMARGIN    =    SCRNLOC      ; left window border for text display (X position after new line)
@@ -56,8 +66,9 @@ HOME       = $FB7D ; Apple III screen init routine
 VTAB       = $FBC7 ; Apple III BASCALC routine to calculate line's base address
 SETCV      = $FBC5
 RDKEY      = $FD0C
+COUT2      = $FC06
 COUT       = $FC39
-PRBYTE     = $F941
+PRBYTE     = $F9AE
 PRHEX      = $F9B7
 BELL       = $FC4E
 DEBUG_MONITOR = $F901
