@@ -26,7 +26,7 @@
 
   <metadata>
     <!-- <property name="mimetypes" ></property> -->
-    <property name="globs" >*.s;*.asm;*.6502</property>
+    <property name="globs" >*.s;*.asm;*.ass;*.6502</property>
   </metadata>
 
   <styles>
@@ -91,7 +91,7 @@
                 <keyword>RTI</keyword>
                 <keyword>SBC</keyword>
                 <keyword>SEC</keyword>
-                <keyword>SEC</keyword>
+                <keyword>SED</keyword>
                 <keyword>SEI</keyword>
                 <keyword>STA</keyword>
                 <keyword>STX</keyword>
@@ -115,22 +115,32 @@
                 <keyword>INCLUDE</keyword>
                 <keyword>require</keyword>
                 <keyword>macro</keyword>
+                <keyword>MACRO</keyword>
                 <keyword>if</keyword>
                 <keyword>IF</keyword>
                 <keyword>ifdef</keyword>
+                <keyword>IFDEF</keyword>
                 <keyword>ifndef</keyword>
+                <keyword>IFNDEF</keyword>
                 <keyword>ifnblank</keyword>
                 <keyword>else</keyword>
                 <keyword>ELSE</keyword>
                 <keyword>end</keyword>
+                <keyword>END</keyword>
                 <keyword>endif</keyword>
                 <keyword>ENDIF</keyword>
                 <keyword>endmacro</keyword>
-                <keyword>endproc</keyword>
-                <keyword>segment</keyword>
-                <keyword>setcpu</keyword>
-                <keyword>reloc</keyword>
+                <keyword>ENDMACRO</keyword>
                 <keyword>proc</keyword>
+                <keyword>PROC</keyword>
+                <keyword>endproc</keyword>
+                <keyword>ENDPROC</keyword>
+                <keyword>segment</keyword>
+                <keyword>SEGMENT</keyword>
+                <keyword>setcpu</keyword>
+                <keyword>SETCPU</keyword>
+                <keyword>reloc</keyword>
+                <keyword>RELOC</keyword>
             </context>
 
             <context id="assemblercmds" style-ref="datatype">
