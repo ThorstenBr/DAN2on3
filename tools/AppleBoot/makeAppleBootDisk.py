@@ -8,6 +8,7 @@ DISK_SIZE = 140*1024         # size of an AppleII(I) disk in bytes: 140K
 ForceFlag = False
 PoMode    = False
 ExtraBlockAddress = None
+AnyDiskSize = False
 
 def readFile(InputFileName):
 	with open(InputFileName, "rb") as InputFile:
@@ -81,12 +82,14 @@ def patchBootloader(Disk, Bootloader):
 	return Disk
 
 def getParameters():
-	global DISK_SIZE, ForceFlag, PoMode, ExtraBlockAddress
+	global DISK_SIZE, ForceFlag, PoMode, ExtraBlockAddress, AnyDiskSize
 
 	Parameters = sys.argv[1:]
 	while Parameters!=[]:
 		if Parameters[0]=="--force":
 			ForceFlag = True
+		elif Parameters[0]=="--anydisksize":
+			AnyDiskSize = True
 		elif Parameters[0]=="--po":
 			PoMode = True
 		elif Parameters[0]=="--extrablocks":
@@ -120,7 +123,7 @@ def main():
 	else:
 		Disk = b"\x00" * DISK_SIZE
 
-	if len(Disk) != DISK_SIZE:
+	if (not AnyDiskSize)and(len(Disk) != DISK_SIZE):
 		print("ERROR: Disk has an unexpected size. That's not going to work!")
 		sys.exit(1)
 
