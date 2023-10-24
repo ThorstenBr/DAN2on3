@@ -462,7 +462,7 @@ Current file: saratests.s
 00F6E5  1                          .BYTE $FF
 00F6E5  1                          ;.BYTE $F6E5-SPACER2
 00F6E5  1                          .ENDREP
-00F6E5  1  23                      .BYTE $23 ; ROM CHECKSUM
+00F6E5  1  57                      .BYTE $57 ; ROM CHECKSUM
 00F6E6  1               ;F6E6
 00F6E6  1               .ENDIF
 00F6E6  1               ;

@@ -23,8 +23,8 @@ def calculateChecksum(Data):
 		raise RuntimeError("Invalid ROM size! Size must be 4K.")
 	CkSum = 0x00
 	for i in range(4096):
-		# FFC0-FFEF is excluded from the checksum
-		if (i>=0x1FC0)and(i<=0x1FEF):
+		if (i>=0xFC0)and(i<=0xFEF):
+			# (F)FC0-(F)FEF is excluded from the checksum (ROM not visible in this area, since it's mapped to the 6522's registers)
 			continue
 		CkSum ^= Data[i]
 	return CkSum
