@@ -102,7 +102,7 @@ CHPG       =    *
 ; SETUP SYSTEM
 ;
 ;
-           LDA     #$52+ROM     ; TURN OFF SCREEN, SET 2MHZ SPEED
+DIAGN:     LDA     #$52+ROM     ; TURN OFF SCREEN, SET 2MHZ SPEED
            STA     SYSD1        ; AND RUN OFF ROM
            LDX     #00          ; SET BANK SWITCH TO ZERO
            STX     SYSEO
@@ -122,10 +122,10 @@ DISK1:     LDA     DISKOFF,Y
            DEY
            DEY
            BPL     DISK1
-           LDA     KEYBD
-           AND     #04
-           BNE     NXBYT
-           JMP     RECON
+           LDA     KEYBD        ; READ KEYBOARD MODIFIERS
+           AND     #04          ; CTRL KEY PRESSED?
+           BNE     NXBYT        ; RUN DIAGNOSTICS WHEN NOT PRESSED
+           JMP     RECON        ; OTHERWISE BOOT IMMEDIATELY
 ;
 ; VERIFY ZERO PAGE
 ;

@@ -109,7 +109,7 @@ Current file: saratests.s
 00F4EE  1               ; SETUP SYSTEM
 00F4EE  1               ;
 00F4EE  1               ;
-00F4EE  1  A9 53                   LDA     #$52+ROM     ; TURN OFF SCREEN, SET 2MHZ SPEED
+00F4EE  1  A9 53        DIAGN:     LDA     #$52+ROM     ; TURN OFF SCREEN, SET 2MHZ SPEED
 00F4F0  1  8D DF FF                STA     SYSD1        ; AND RUN OFF ROM
 00F4F3  1  A2 00                   LDX     #00          ; SET BANK SWITCH TO ZERO
 00F4F5  1  8E E0 FF                STX     SYSEO
@@ -129,10 +129,10 @@ Current file: saratests.s
 00F516  1  88                      DEY
 00F517  1  88                      DEY
 00F518  1  10 F9                   BPL     DISK1
-00F51A  1  AD 08 C0                LDA     KEYBD
-00F51D  1  29 04                   AND     #04
-00F51F  1  D0 03                   BNE     NXBYT
-00F521  1  4C 86 F6                JMP     RECON
+00F51A  1  AD 08 C0                LDA     KEYBD        ; READ KEYBOARD MODIFIERS
+00F51D  1  29 04                   AND     #04          ; CTRL KEY PRESSED?
+00F51F  1  D0 03                   BNE     NXBYT        ; RUN DIAGNOSTICS WHEN NOT PRESSED
+00F521  1  4C 86 F6                JMP     RECON        ; OTHERWISE BOOT IMMEDIATELY
 00F524  1               ;
 00F524  1               ; VERIFY ZERO PAGE
 00F524  1               ;
