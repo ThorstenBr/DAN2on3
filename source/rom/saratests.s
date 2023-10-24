@@ -332,15 +332,17 @@ KEYPLUG:   LDA     KEYBD        ; IS KYBD PLUGGED IN?
            LDA     SYSD1        ; IS ERROR FLAG SET?
            BMI     SEX          ; ERROR HANG
 .ELSE
+ATD:       LDA     SYSD1        ; IS ERROR FLAG SET? (1MHZ FLAG INDICATES AN ERROR)
+HANG:      BMI     HANG         ; ERROR HANG
 DAN2FIND:
            LDA     KEYBD        ; load keyboard modifiers
            AND     #$08         ; check "alpha lock" key pressed?
-           BEQ     DAN2NONE     ; return with "no card found" if alpha lock is pressed
+           BEQ     DISKBOOT     ; boot from disk if alpha lock is pressed
            LDX     #$05         ; start scanning at slot 4(=5-1)
            LDA     #DAN2IDOFS   ; prepare slot address (lower byte)
            STA     DAN2_DENT
 DAN2NXSLOT:DEX                  ; calculate next slot
-           BEQ     DAN2NONE     ; check slots 1-4, otherwise abort
+           BEQ     DISKBOOT     ; check slots 1-4, otherwise abort and boot from disk
            TXA                  ; prepare the upper address byte for the slot
            ORA     #$C0         ; I/O segment address ($C1-$C4)
            STA     DAN2_DENT+1  ; store upper address byte
@@ -354,20 +356,15 @@ DAN2NXSLOT:DEX                  ; calculate next slot
            LDA     (DAN2_DENT),Y; load DAN][ ProDOS handler entry (lower byte)
            STA     DAN2_DENT    ; update slot address (now points to ProDOS handler entry)
            LDA     DAN2_DENT+1  ; load slot address (upper byte) and return
-DAN2NONE:  RTS
+           BNE     DAN2BOOT     ; boot from DAN][
 DAN2GO:    JMP     (DAN2_DENT)  ; jump to DAN][ controller handler
-
-DAN2IDLEN = $05                       ; check 5 bytes in ROM for card detection
-DAN2IDOFS = $0A                       ; offset where to find the DAN2 card's ID
-DAN2ID:    .BYTE $A9,$01,$9D,$FB,$BF  ; ROM bytes at offset $0A: "LDA #$01;STA $BFFB,X"
 
            SPACER1 = *
            .REPEAT $F686-SPACER1
-           ;.BYTE $FF
-           .BYTE $F686-SPACER1
+           .BYTE $FF
+           ;.BYTE $F686-SPACER1
            .ENDREP
 ;F686
-ATD:
 .ENDIF
 ;
 ; RECONFIGURE THE SYSTEM
@@ -383,7 +380,7 @@ RECON:     LDA     #$77         ; TURN ON SCREEN
 .IFDEF ORIGINAL
            BNE     DISKBOOT     ; NO, DO REGULAR BOOT
 .ELSE
-           BNE     DAN2CHECK    ; check if DAN][ controller card present
+           BNE     DAN2FIND     ; check if DAN][ controller card present
 .ENDIF
 GOMONITOR: JSR     MONITOR      ; AND NEVER COME BACK
 DISKBOOT:  LDX     #01          ; READ BLOCK 0
@@ -427,9 +424,6 @@ SEX3:      LDA     SLT1,Y       ; EXCERCISE
            BNE     SEX3
 .ELSE
            ; NO SEX: the system excerciser is disabled to make space for the DAN][ boot support.
-DAN2CHECK:
-           JSR     DAN2FIND     ; check if a DAN][ controller is present
-           BEQ     DISKBOOT     ; not found: do normal disk boot - otherwise do a DAN][ bootstrap
 DAN2BOOT:
            ; enters with slot number of DANII card in A
            ASL     A            ; shift by 4
@@ -447,14 +441,18 @@ DAN2BOOT:
            STA     DAN2_BLKHI
            JSR     DAN2GO       ; call DANII handler to load boot block
            BCS     GOMONITOR    ; enter monitor when loading failed
-           JMP     $A000        ; jump to loaded boot program
+           BCC     GOBOOT       ; unconditional branch to loaded boot program
+
+DAN2IDLEN = $05                       ; check 5 bytes in ROM for card detection
+DAN2IDOFS = $0A                       ; offset where to find the DAN2 card's ID
+DAN2ID:    .BYTE $A9,$01,$9D,$FB,$BF  ; ROM bytes at offset $0A: "LDA #$01;STA $BFFB,X"
 
            SPACER2 = *
            .REPEAT $F6E5-SPACER2
            .BYTE $FF
            ;.BYTE $F6E5-SPACER2
            .ENDREP
-           .BYTE $57 ; ROM CHECKSUM
+           .BYTE $69 ; ROM CHECKSUM
 ;F6E6
 .ENDIF
 ;
