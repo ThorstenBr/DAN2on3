@@ -24,7 +24,7 @@ The DAN II controller is made to fit the slim Apple II case - so it has more tha
 * Format support is *not* available. Please use preformatted disk images (see [volumes](/volumes) folder for templates).
 
 # Controller Volume Configuration
-The Apple /// does not support the DAN II controller's ROM boot configuration menu ("DAN II PRESS RETURN" as known from the Apple II). You can manually invoke the ROM boot menu using the Apple II emulation disk on the Apple ///: load Apple II emulation disk, then enter "PR#1" in Apple BASIC to configure the controller plugged into slot 1 (PR#2 if plugged into slot #2 etc).
+With its default ROM, the Apple /// does not support the DAN II controller's ROM boot configuration menu ("DAN II PRESS RETURN" as known from the Apple II). You can manually invoke the ROM boot menu using the Apple II emulation disk on the Apple ///: load Apple II emulation disk, then enter "PR#1" in Apple BASIC to configure the controller plugged into slot 1 (PR#2 if plugged into slot #2 etc).
 
 However, since a separate disk is required anyway, a separate configuration disk "Apple3SOS.DAN2on3.Config.dsk" is provided for convenience. It provides the same configuration options as known from the controller's Apple II boot menu.
 
@@ -33,10 +33,11 @@ It also shows the list of available volume files present on the SD cards.
 
 Configuration is identical/similar as known from the Apple II:
 
-* Options "0"-"9" and "A"-"F" selects the respective volume file from the SD-disk (e.g. the respective "BLKDEV00.PO", ..., "BLKDEV0F.PO", or, when using new firmware, "VOL00...PO", "VOL0F...PO").
-* The currently selected volume is highlighted.
-* Pressing RETURN keeps the current selection for the respective card.
-* Press "I" to configure the IP address of the FTP server (if you have the Wiznet 5500 module attached).
+* Use the **ARROW KEYS** (or **SPACE**/**,**) to select the active volume for each SOS drive and press **RETURN** to confirm.
+* Alternatively press keys **0** to **9** or **A** to **F** to directly select volumes.
+* Press **LEFT**/**RIGHT ARROW** to flip the volume pages (if you have more than 16 volumes per SD card).
+* Press **ESCAPE** to abort and keep the previous drive configuration.
+* Press **I** to enter the IP configuration dialog (if you have the Wiznet 5500 module attached).
 * See the [DANII controller documentation](https://github.com/ThorstenBr/Apple2Card) for details.
 
 **Note:**
