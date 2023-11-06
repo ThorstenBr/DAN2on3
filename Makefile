@@ -3,7 +3,7 @@
 
 include version.mk
 
-ZIP_FILE    := DAN2on3_v$(CONFIG_VERSION).zip
+ZIP_FILE    := Releases/DAN2on3_v$(CONFIG_VERSION).zip
 DISKS       := Apple3Disk.DAN2on3.Boot.dsk \
                Apple3Disk.DAN2on3.SOSSysUtils.dsk
 A3_BOOTMENU := VOLA3_APPLEIII_BOOT_MENU.po
@@ -28,5 +28,6 @@ bin disks:
 
 release:
 	- rm -f $(ZIP_FILE)
+	@mkdir -p Releases
 	@zip $(ZIP_FILE) readme.txt $(addprefix disks/,$(DISKS) $(DISKS:.dsk=.po)) $(addprefix bin/,$(A3_BOOTMENU) $(DRIVER) $(A3_ROMS))
 
