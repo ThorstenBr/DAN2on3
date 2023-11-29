@@ -24,11 +24,28 @@ The DAN II controller is made to fit the slim Apple II case - so it has more tha
 * Format support is *not* available. Please use preformatted disk images (see [volumes](/volumes) folder for templates).
 
 # Controller Volume Configuration
+
+## Boot ROM
+
+Unlike the Apple ][, the stock Apple /// ROM has no support for custom extensions. The original Apple /// ROM only supported booting from a floppy, nothing else.
+If you want the convenience of configuring and bootstrapping volumes from the DAN][ Controller directly, you can use a custom ROM.
+
+The custom Apple /// ROM was moved to separate project. It has options supporting DAN][ bootstrapping, but also provides improved monitor/debug options etc. See here:
+
+* **Apple /// Custom ROM project:** [https://github.com/ThorstenBr/Apple_III_Custom_ROM](https://github.com/ThorstenBr/Apple_III_Custom_ROM).
+
+You may also be interested in a ROM adapter, so you can use standard (E)EPROMs (27c64 or 28c64) with your Apple ///:
+
+* **Apple /// ROM Adapter**: [https://github.com/ThorstenBr/Apple_III_ROM_Adapter](https://github.com/ThorstenBr/Apple_III_ROM_Adapter)
+
+The use of the custom ROM is optional though. You can also use a boot disk to configure the DAN][ Controller in the Apple ///.
+
+## Boot Disk
 With its default ROM, the Apple /// does not support the DAN II controller's ROM boot configuration menu ("DAN II PRESS RETURN" as known from the Apple II). You can manually invoke the ROM boot menu using the Apple II emulation disk on the Apple ///: load Apple II emulation disk, then enter "PR#1" in Apple BASIC to configure the controller plugged into slot 1 (PR#2 if plugged into slot #2 etc).
 
-However, since a separate disk is required anyway, a separate configuration disk "Apple3SOS.DAN2on3.Config.dsk" is provided for convenience. It provides the same configuration options as known from the controller's Apple II boot menu.
+However, since a separate disk is required anyway, a separate configuration disk "Apple3SOS.DAN2on3.Boot.dsk" is provided for convenience. It provides the same configuration options as known from the controller's Apple II boot menu.
 
-The configuration disk automatically detects whether the DAN II controller is plugged and in which slot.
+The boot disk automatically detects whether the DAN II controller is plugged and in which slot.
 It also shows the list of available volume files present on the SD cards.
 
 Configuration is identical/similar as known from the Apple II:
@@ -45,7 +62,6 @@ Configuration is identical/similar as known from the Apple II:
 * The menu now supports the flexible volume mapping, which is supported by newer firmware of the DAN][ controller (firmware >= [3.0.0](https://github.com/ThorstenBr/Apple2Card/releases)). Volumes 1 + 2 may be selected from any of the 32 volumes (independently of the SD card).
 * If, however, you are using a DANII controller card with earlier firmware, then you have to restrict to select volume 1 on SD card 1 and volume 2 on SD card 2 (the menu does not check your firmware version).
 * Apple III SOS volume images of up to 16MB (32767 * 512 bytes) are supported. With Apple II ProDOS up to 32MB (65535 * 512 bytes) may be used, however, the larger 32MB images are not properly handled by Apple III SOS (though the file system itself is identical between Apple II ProDOS and Apple /// SOS).
-
 
 ![Apple III - DAN2on3 Configuration Menu](photos/DAN2on3_ConfigMenu.jpg)
 
